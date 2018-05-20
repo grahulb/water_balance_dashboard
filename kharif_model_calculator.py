@@ -28,28 +28,22 @@ class Budget:
 	def __init__(self):
 		self.sm, self.runoff, self.infil, self.AET, self.GW_rech, self.sec_run_off = [],[],[],[],[], []
 		
-	def summarize(self, crops, start_date_index, end_date_index , monsoon_end_date_index, circle_name):
-		self.runoff = np.array(self.runoff)	
+	def summarize(self, crops, start_date_index, end_date_indices, circle_name):
+		self.runoff = np.array(self.runoff)
 		self.infil = np.array(self.infil)
 		self.AET = np.array(self.AET)
 		self.GW_rech = np.array(self.GW_rech)
 		self.sm = np.array(self.sm)
 		self.sec_run_off = np.array(self.sec_run_off)
-		self.sm_crop_end = np.array([self.sm[crops[i].end_date_index[circle_name]][i]	for i in range(len(crops))])
- 		self.sm_monsoon_end = np.array([self.sm[monsoon_end_date_index+1][i]	for i in range(len(crops))])
-		self.runoff_crop_end = [np.sum(self.runoff[start_date_index:crops[i].end_date_index[circle_name] + 1,i]) + np.sum(self.sec_run_off[start_date_index:crops[i].end_date_index[circle_name]+1,i]) for i in range(len(crops))]
-		self.runoff_monsoon_end = [np.sum(self.runoff[start_date_index:monsoon_end_date_index+1,i]) + np.sum(self.sec_run_off[start_date_index:monsoon_end_date_index+1,i]) for i in range(len(crops))]
-		self.runoff_total = [np.sum(self.runoff[start_date_index:end_date_index+1,i]) + np.sum(self.sec_run_off[start_date_index:end_date_index+1,i]) for i in range(len(crops))]
-		self.infil_crop_end = [np.sum(self.infil[start_date_index:crops[i].end_date_index[circle_name]+1,i]) - np.sum(self.sec_run_off[start_date_index:crops[i].end_date_index[circle_name]+1,i]) for i in range(len(crops))]
-		self.infil_monsoon_end = [np.sum(self.infil[start_date_index:monsoon_end_date_index+1,i]) - np.sum(self.sec_run_off[start_date_index:monsoon_end_date_index+1,i]) for i in range(len(crops))]
-		self.AET_crop_end = [np.sum(self.AET[start_date_index:crops[i].end_date_index[circle_name]+1,i])	for i in range(len(crops))]
-		self.AET_monsoon_end = [np.sum(self.AET[start_date_index:monsoon_end_date_index+1,i])	for i in range(len(crops))]
-		self.GW_rech_crop_end = [np.sum(self.GW_rech[start_date_index:crops[i].end_date_index[circle_name]+1,i])	for i in range(len(crops))]
-		self.GW_rech_monsoon_end = [np.sum(self.GW_rech[start_date_index:monsoon_end_date_index+1,i])	for i in range(len(crops))]
-		self.GW_rech_total = [np.sum(self.GW_rech[start_date_index:end_date_index+1,i])	for i in range(len(crops))]
-		self.PET_minus_AET_monsoon_end = np.array([crops[i].PET_sum_monsoon[circle_name] - self.AET_monsoon_end[i]	for i in range(len(crops))])
-		self.PET_minus_AET_post_monsoon = np.array([(crops[i].PET_sum_cropend[circle_name] - self.AET_crop_end[i])-self.PET_minus_AET_monsoon_end[i]	for i in range(len(crops))])
-		self.PET_minus_AET_crop_end = np.array([crops[i].PET_sum_cropend[circle_name] - self.AET_crop_end[i]		for i in range(len(crops))])
+		self.sm_on_date, self.runoff_till_date, self.infil_till_date, self.AET_till_date, self.GW_rech_till_date = {}, {}, {}, {}, {}
+		self.PET_minus_AET_till_date = {}
+		for end_date_index in end_date_indices:
+			self.sm_on_date[end_date_index] = np.array([self.sm[end_date_index][i]	for i in range(len(crops))])
+			self.runoff_till_date[end_date_index] = [np.sum(self.runoff[start_date_index:end_date_index + 1,i]) + np.sum(self.sec_run_off[start_date_index:end_date_index+1,i]) for i in range(len(crops))]
+			self.infil_till_date[end_date_index] = [np.sum(self.infil[start_date_index:end_date_index+1,i]) - np.sum(self.sec_run_off[start_date_index:end_date_index+1,i]) for i in range(len(crops))]
+			self.AET_till_date[end_date_index] = [np.sum(self.AET[start_date_index:end_date_index+1,i])	for i in range(len(crops))]
+			self.GW_rech_till_date[end_date_index] = [np.sum(self.GW_rech[start_date_index:end_date_index+1,i])	for i in range(len(crops))]
+			self.PET_minus_AET_till_date[end_date_index] = np.array([np.sum(crops[i].PET[circle_name][start_date_index:end_date_index+1]) - self.AET_till_date[end_date_index][i]		for i in range(len(crops))])
 		# print self.GW_rech_monsoon_end
 		# self.gwl=[float(k[0]) for k in self.GW_rech.tolist()]
 		# self.ro =[float(k[0]) for k in self.runoff.tolist()]
@@ -77,7 +71,7 @@ class Budget:
 class Crop:
 	def __init__(self, name):
 		self.name = name
-		self.PET = {};	self.end_date_index =dict(); self.PET_sum_monsoon =dict(); self.PET_sum_cropend = dict();	
+		self.PET = {};	self.end_date_index =dict(); self.PET_till_date = {}
 	@property
 	def root_depth(self):	return dict_crop[self.name][2] if self.name in dict_crop.keys() else dict_crop_current_fallow[self.name][2] if self.name in dict_crop_current_fallow.keys() else dict_LULC_pseudo_crop[self.name][2]
 	@property
@@ -111,7 +105,10 @@ class Point:
 	
 	@property
 	def rain_circle(self):	return self.container_polygons[BOUNDARY_LABEL][Circle].lower()
-
+	@property
+	def crop(self):
+		# return Crop('bajri')
+		return Crop(district_taluka_major_crops_dict[(self.container_polygons[BOUNDARY_LABEL]['District'], self.container_polygons[BOUNDARY_LABEL]['Taluka'])])
 	@property
 	def depth_value(self):	return dict_SoilDep[self.soil_polygon[Depth].lower()]
 	@property
@@ -146,21 +143,20 @@ class Point:
 		return x
 
 	
-	def run_model(self, rain, crops, start_date_index, end_date_index, monsoon_end_date_index,lulc):
+	def run_model(self, rain, crops, start_date_index, end_date_indices, lulc):
 		self.setup_for_daily_computations(crops,lulc)
 		self.SM1_fraction = self.layer2_moisture = self.WP
-		
-		for day in range (start_date_index, end_date_index+1):
+
+		for day in range (start_date_index, max(end_date_indices)+1):
 			self.primary_runoff(day, rain)
 			self.aet(day, crops)
 			self.percolation_below_root_zone(day)
 			self.secondary_runoff(day)
 			self.percolation_to_GW(day)
 
-		self.budget.summarize(crops, start_date_index, end_date_index, monsoon_end_date_index, self.rain_circle)
-		self.budget.sm_crop_end -= self.WP_depth	# requirement expressed by users
-		self.budget.sm_monsoon_end -= self.WP_depth	# requirement expressed by users
-	
+		self.budget.summarize(crops, start_date_index, end_date_indices, self.rain_circle)
+		for end_date_index in end_date_indices: self.budget.sm_on_date[end_date_index] -= self.WP_depth	# requirement expressed by users
+
 	def setup_for_daily_computations(self, crops,lulc):
 		"""
 		"""
@@ -406,13 +402,14 @@ class KharifModelCalculator:
 
 	def filter_out_points_with_incomplete_data(self, points):
 		log_file = open(os.path.join(self.path, 'log'), 'a')
-		log_file.write(time.ctime(time.time()) + '\n')
+		log_file.write('\n' + time.ctime(time.time()) + '\n')
 		filtered_points = []
 		for point in points:
 			if (None not in [
 				point.container_polygons[SOIL_LABEL],
 				point.container_polygons[LULC_LABEL],
 				point.container_polygons[BOUNDARY_LABEL],
+				point.container_polygons[BOUNDARY_LABEL][Circle],
 				point.slope
 			]):
 				filtered_points.append(point)
@@ -435,32 +432,30 @@ class KharifModelCalculator:
 
 	def calculate(self,
 					rain,
-					crop_names,
 					sowing_threshold,
 					start_date_index=START_DATE_INDEX,
-					end_date_index=END_DATE_INDEX,
-					monsoon_end_date_index = MONSOON_END_DATE_INDEX
+                    end_date_indices=[END_DATE_INDEX],
 				):
 		
 		start_time = time.time()
 		
 		self.rain = rain
-		self.crops = [Crop(crop_name)	for crop_name in crop_names]
+		self.crops = [Crop('bajri')]
 		self.LULC_pseudo_crops = {crop_name: Crop(crop_name)	for crop_name in dict_LULC_pseudo_crop}
 		self.currnet_fallow = [Crop('current fallow crop')]
 
 		self.set_PET_and_end_date_index_of_crops(self.et0, sowing_threshold)
-		for circle_name in self.rain:			
-			for crop in self.crops:
-				crop.PET_sum_monsoon[circle_name] = sum(crop.PET[circle_name][start_date_index:monsoon_end_date_index+1])
-				crop.PET_sum_cropend[circle_name] = sum(crop.PET[circle_name][start_date_index:crop.end_date_index[circle_name]+1])
-			for crop_name in self.LULC_pseudo_crops:
-				crop = self.LULC_pseudo_crops[crop_name]
-				crop.PET_sum_monsoon[circle_name] = sum(crop.PET[circle_name][start_date_index:monsoon_end_date_index+1])
-				crop.PET_sum_cropend[circle_name] = sum(crop.PET[circle_name][start_date_index:crop.end_date_index[circle_name]+1])
-			for crop in self.currnet_fallow:
-				crop.PET_sum_monsoon[circle_name] = sum(crop.PET[circle_name][start_date_index:monsoon_end_date_index+1])
-				crop.PET_sum_cropend[circle_name] = sum(crop.PET[circle_name][start_date_index:crop.end_date_index[circle_name]+1])
+		# for circle_name in self.rain:
+		# 	for crop in self.crops:
+		# 		crop.PET_sum_monsoon[circle_name] = sum(crop.PET[circle_name][start_date_index:monsoon_end_date_index+1])
+		# 		crop.PET_sum_cropend[circle_name] = sum(crop.PET[circle_name][start_date_index:crop.end_date_index[circle_name]+1])
+		# 	for crop_name in self.LULC_pseudo_crops:
+		# 		crop = self.LULC_pseudo_crops[crop_name]
+		# 		crop.PET_sum_monsoon[circle_name] = sum(crop.PET[circle_name][start_date_index:monsoon_end_date_index+1])
+		# 		crop.PET_sum_cropend[circle_name] = sum(crop.PET[circle_name][start_date_index:crop.end_date_index[circle_name]+1])
+		# 	for crop in self.currnet_fallow:
+		# 		crop.PET_sum_monsoon[circle_name] = sum(crop.PET[circle_name][start_date_index:monsoon_end_date_index+1])
+		# 		crop.PET_sum_cropend[circle_name] = sum(crop.PET[circle_name][start_date_index:crop.end_date_index[circle_name]+1])
 
 		
 		# rain_sum = sum(self.rain[start_date_index:monsoon_end_date_index+1])
@@ -482,51 +477,55 @@ class KharifModelCalculator:
 			count += 1
 			if count % 100 == 0:	print count
 			if point.lulc_type in ['agriculture', 'fallow land']:
-				point.run_model(self.rain[point.rain_circle]['daily_rain'], self.crops, start_date_index, end_date_index, monsoon_end_date_index, dict_lulc[point.container_polygons[LULC_LABEL][Desc].lower()])
+				# point.run_model(self.rain[point.rain_circle]['daily_rain'], [point.crop], start_date_index, end_date_indices, dict_lulc[point.container_polygons[LULC_LABEL][Desc].lower()])
+				point.run_model(self.rain[point.rain_circle]['daily_rain'], self.crops, start_date_index, end_date_indices, dict_lulc[point.container_polygons[LULC_LABEL][Desc].lower()])
 			else:
-				point.run_model(self.rain[point.rain_circle]['daily_rain'], [self.LULC_pseudo_crops[point.lulc_type]], start_date_index, end_date_index, monsoon_end_date_index, dict_lulc[point.container_polygons[LULC_LABEL][Desc].lower()] ) 
+				point.run_model(self.rain[point.rain_circle]['daily_rain'], [self.LULC_pseudo_crops[point.lulc_type]], start_date_index, end_date_indices, dict_lulc[point.container_polygons[LULC_LABEL][Desc].lower()] )
+			# if count > 0:
+			# 	print point.budget.runoff_till_date
+			# 	break
 
-		self.non_ag_points = {zone_id: filter(lambda p: p.lulc_type in dict_LULC_pseudo_crop, self.zone_points_dict[zone_id] ) for zone_id in self.zone_points_dict}
-		self.ag_points = {zone_id: filter(lambda p: p.lulc_type in ['agriculture', 'fallow land'], self.zone_points_dict[zone_id] ) for zone_id in self.zone_points_dict}
-		self.non_ag_points_type = {zone_id : {lulc: filter(lambda p : p.lulc_type == lulc, self.non_ag_points[zone_id]) for lulc in dict_LULC_pseudo_crop} for zone_id in self.non_ag_points}
-
-		self.zone_points_dict_non_ag_missing_LU = {zone_id : {lulc:map(Point.copyPoint,self.ag_points[zone_id]) if (len(self.non_ag_points[zone_id]) == 0) else map(Point.copyPoint,self.non_ag_points[zone_id]) if (len(self.non_ag_points_type[zone_id][lulc]) == 0) else [] for lulc in self.non_ag_points_type[zone_id]} for zone_id in self.non_ag_points_type}
-		self.zone_points_dict_ag_missing = {zone_id : map(Point.copyPoint,self.non_ag_points[zone_id]) if (len(self.ag_points[zone_id]) == 0)  else [] for zone_id in self.ag_points}
-		self.zone_points_dict_current_fallow =  {zone_id: map(Point.copyPoint,self.ag_points[zone_id]) if (len(self.ag_points[zone_id]) != 0) else map(Point.copyPoint,self.non_ag_points[zone_id]) if (len(self.non_ag_points_type[zone_id]) != 0) else [] for zone_id in self.ag_points }
-
-		#For zones not having in Non Ag type
-		for zone_id in self.zone_points_dict_non_ag_missing_LU:
-			for lulc in self.zone_points_dict_non_ag_missing_LU[zone_id]:
-				for point in self.zone_points_dict_non_ag_missing_LU[zone_id][lulc]:
-					point.run_model(self.rain[point.rain_circle]['daily_rain'], [self.LULC_pseudo_crops[lulc]], start_date_index, end_date_index, monsoon_end_date_index,lulc)
-		#For zones not having Ag points
-		for zone_id in self.zone_points_dict_ag_missing:
-			for point in self.zone_points_dict_ag_missing[zone_id]:
-				point.run_model(self.rain[point.rain_circle]['daily_rain'], self.crops, start_date_index, end_date_index, monsoon_end_date_index,'agriculture')
-
-		#For Current fallow:
-		for zone_id in self.zone_points_dict_current_fallow:
-			for point in self.zone_points_dict_current_fallow[zone_id]:
-				point.run_model(self.rain[point.rain_circle]['daily_rain'], self.currnet_fallow, start_date_index, end_date_index, monsoon_end_date_index,'current fallow')
-
-
-		self.filter_out_cadastral_plots_outside_boundary()
-		self.output_cadastral_points = self.generate_output_points_for_cadastral_plots()
-		self.set_container_polygon_of_points_for_layers(self.output_cadastral_points, [self.soil_layer, self.lulc_layer, self.cadastral_layer,self.zones_layer])
-		self.set_slope_at_points(self.output_cadastral_points)
-		self.output_cadastral_points = self.filter_out_points_with_incomplete_data(self.output_cadastral_points)
-		self.output_cadastral_points = filter(lambda p:	p.lulc_type not in ['water','habitation'], self.output_cadastral_points)
-		print 'Number of cadastral points to process : ', len(self.output_cadastral_points)
-		count = 0
-		for point in self.output_cadastral_points:
-			count += 1
-			if count % 20 == 0:	print count
-			if point.lulc_type in ['agriculture', 'fallow land']:
-				point.run_model(self.rain[point.rain_circle]['daily_rain'], self.crops, start_date_index, end_date_index, monsoon_end_date_index, dict_lulc[point.container_polygons[LULC_LABEL][Desc].lower()])
-			else:
-				point.run_model(self.rain[point.rain_circle]['daily_rain'], [self.LULC_pseudo_crops[point.lulc_type]], start_date_index, end_date_index, monsoon_end_date_index,dict_lulc[point.container_polygons[LULC_LABEL][Desc].lower()])
-		print 'done'
-		return
-
-		print("--- %s seconds ---" % (time.time() - start_time))
-		print("done")
+		# self.non_ag_points = {zone_id: filter(lambda p: p.lulc_type in dict_LULC_pseudo_crop, self.zone_points_dict[zone_id] ) for zone_id in self.zone_points_dict}
+		# self.ag_points = {zone_id: filter(lambda p: p.lulc_type in ['agriculture', 'fallow land'], self.zone_points_dict[zone_id] ) for zone_id in self.zone_points_dict}
+		# self.non_ag_points_type = {zone_id : {lulc: filter(lambda p : p.lulc_type == lulc, self.non_ag_points[zone_id]) for lulc in dict_LULC_pseudo_crop} for zone_id in self.non_ag_points}
+		#
+		# self.zone_points_dict_non_ag_missing_LU = {zone_id : {lulc:map(Point.copyPoint,self.ag_points[zone_id]) if (len(self.non_ag_points[zone_id]) == 0) else map(Point.copyPoint,self.non_ag_points[zone_id]) if (len(self.non_ag_points_type[zone_id][lulc]) == 0) else [] for lulc in self.non_ag_points_type[zone_id]} for zone_id in self.non_ag_points_type}
+		# self.zone_points_dict_ag_missing = {zone_id : map(Point.copyPoint,self.non_ag_points[zone_id]) if (len(self.ag_points[zone_id]) == 0)  else [] for zone_id in self.ag_points}
+		# self.zone_points_dict_current_fallow =  {zone_id: map(Point.copyPoint,self.ag_points[zone_id]) if (len(self.ag_points[zone_id]) != 0) else map(Point.copyPoint,self.non_ag_points[zone_id]) if (len(self.non_ag_points_type[zone_id]) != 0) else [] for zone_id in self.ag_points }
+		#
+		# #For zones not having in Non Ag type
+		# for zone_id in self.zone_points_dict_non_ag_missing_LU:
+		# 	for lulc in self.zone_points_dict_non_ag_missing_LU[zone_id]:
+		# 		for point in self.zone_points_dict_non_ag_missing_LU[zone_id][lulc]:
+		# 			point.run_model(self.rain[point.rain_circle]['daily_rain'], [self.LULC_pseudo_crops[lulc]], start_date_index, end_date_index, monsoon_end_date_index,lulc)
+		# #For zones not having Ag points
+		# for zone_id in self.zone_points_dict_ag_missing:
+		# 	for point in self.zone_points_dict_ag_missing[zone_id]:
+		# 		point.run_model(self.rain[point.rain_circle]['daily_rain'], self.crops, start_date_index, end_date_index, monsoon_end_date_index,'agriculture')
+		#
+		# #For Current fallow:
+		# for zone_id in self.zone_points_dict_current_fallow:
+		# 	for point in self.zone_points_dict_current_fallow[zone_id]:
+		# 		point.run_model(self.rain[point.rain_circle]['daily_rain'], self.currnet_fallow, start_date_index, end_date_index, monsoon_end_date_index,'current fallow')
+		#
+		#
+		# self.filter_out_cadastral_plots_outside_boundary()
+		# self.output_cadastral_points = self.generate_output_points_for_cadastral_plots()
+		# self.set_container_polygon_of_points_for_layers(self.output_cadastral_points, [self.soil_layer, self.lulc_layer, self.cadastral_layer,self.zones_layer])
+		# self.set_slope_at_points(self.output_cadastral_points)
+		# self.output_cadastral_points = self.filter_out_points_with_incomplete_data(self.output_cadastral_points)
+		# self.output_cadastral_points = filter(lambda p:	p.lulc_type not in ['water','habitation'], self.output_cadastral_points)
+		# print 'Number of cadastral points to process : ', len(self.output_cadastral_points)
+		# count = 0
+		# for point in self.output_cadastral_points:
+		# 	count += 1
+		# 	if count % 20 == 0:	print count
+		# 	if point.lulc_type in ['agriculture', 'fallow land']:
+		# 		point.run_model(self.rain[point.rain_circle]['daily_rain'], self.crops, start_date_index, end_date_index, monsoon_end_date_index, dict_lulc[point.container_polygons[LULC_LABEL][Desc].lower()])
+		# 	else:
+		# 		point.run_model(self.rain[point.rain_circle]['daily_rain'], [self.LULC_pseudo_crops[point.lulc_type]], start_date_index, end_date_index, monsoon_end_date_index,dict_lulc[point.container_polygons[LULC_LABEL][Desc].lower()])
+		# print 'done'
+		# return
+		#
+		# print("--- %s seconds ---" % (time.time() - start_time))
+		# print("done")

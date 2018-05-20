@@ -7,14 +7,14 @@
 # This file should be included when you package your plugin.# Mandatory items:
 
 [general]
-name=Kharif Model - Multicrop
+name=Water Balance Dashboard
 qgisMinimumVersion=2.0
 description=Generates kharif season vulnerability map
 version=0.1
 author=IITB
 email=sohoni@cse.iitb.ac.in
 
-about=Inputs: Vector Layers: 1. Mini-Watershed 2. Soil Cover 3. LULC Raster Layer: 1. Slope Outputs: Vulnerability Point Vector Layer
+about=Inputs: A folder of pre-configured input data folders
 
 tracker=github.com
 repository=github.com

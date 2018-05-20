@@ -68,10 +68,10 @@ class KharifModel:
 
 		# Declare instance attributes
 		self.actions = []
-		self.menu = self.tr(u'&Kharif Model - Multicrop')
+		self.menu = self.tr(u'&Water Balance Dashboard')
 		# TODO: We are going to let the user set this up in a future iteration
-		self.toolbar = self.iface.addToolBar(u'KharifModelMulticrop')
-		self.toolbar.setObjectName(u'KharifModelMulticrop')
+		self.toolbar = self.iface.addToolBar(u'WaterBalanceDashboard')
+		self.toolbar.setObjectName(u'WaterBalanceDashboard')
 		
 
 	# noinspection PyMethodMayBeStatic
@@ -87,7 +87,7 @@ class KharifModel:
 		:rtype: QString
 		"""
 		# noinspection PyTypeChecker,PyArgumentList,PyCallByClass
-		return QCoreApplication.translate('KharifModelMulticrop', message)
+		return QCoreApplication.translate('WaterBalanceDashboard', message)
 
 
 	def add_action(
@@ -169,10 +169,10 @@ class KharifModel:
 	def initGui(self):
 		"""Create the menu entries and toolbar icons inside the QGIS GUI."""
 
-		icon_path = ':/plugins/KharifModelMulticrop/icon.png'
+		icon_path = ':/plugins/water_balance_dashboard/icon.png'
 		self.add_action(
 			icon_path,
-			text=self.tr(u'Kharif Model - Multicrop'),
+			text=self.tr(u'Water Balance Dashboard'),
 			callback=self.run,
 			parent=self.iface.mainWindow())
 
@@ -181,7 +181,7 @@ class KharifModel:
 		"""Removes the plugin menu item and icon from QGIS GUI."""
 		for action in self.actions:
 			self.iface.removePluginMenu(
-				self.tr(u'&Kharif Model - Multicrop'),
+				self.tr(u'&Water Balance Dashboard'),
 				action)
 			self.iface.removeToolBarIcon(action)
 		# remove the toolbar
@@ -200,41 +200,60 @@ class KharifModel:
 			paths = ['']
 		else:
 			if not os.path.exists(TEST_SUITE_BASE_FOLDER_PATH):	raise Exception('Set TEST_SUITE_BASE_FOLDER_PATH for the debug dataset')
-			paths = [base_path	for base_path in os.listdir(TEST_SUITE_BASE_FOLDER_PATH)	if os.path.isdir(base_path)]
+			paths = [os.path.join(TEST_SUITE_BASE_FOLDER_PATH, base_path)	for base_path in os.listdir(TEST_SUITE_BASE_FOLDER_PATH)	if os.path.isdir(os.path.join(TEST_SUITE_BASE_FOLDER_PATH, base_path))]
+
+		points_values_dict = {};    i = 0
 		for path in paths:
+			i += 1
+			print 'Cluster ', i, '/', len(paths), ' : ', path
 			if self.fetch_inputs(path) is False:	return
 			self.modelCalculator = KharifModelCalculator(self.path, self.et0, **self.input_layers)
-			self.modelCalculator.calculate(self.rain, self.crop_names, self.sowing_threshold, monsoon_end_date_index = self.monsoon_end_date_index)
-			
+			self.modelCalculator.calculate(self.rain, self.sowing_threshold, end_date_indices=END_DATE_INDICES)
+
+			for point in self.modelCalculator.output_grid_points:
+				points_values_dict[point] = point.budget.PET_minus_AET_till_date
+			print 'Total points processed till now : ', len(points_values_dict)
+
 			pointwise_output_csv_filepath = os.path.join(self.base_path, POINTWISE_OUTPUT_CSV_FILENAME)
 
 			op = KharifModelOutputProcessor()
 			op.output_point_results_to_csv	(
  				self.modelCalculator.output_grid_points,
 				pointwise_output_csv_filepath,
-				crops=[crop.name for crop in self.modelCalculator.crops]
+				[crop.name for crop in self.modelCalculator.crops],
+				END_DATE_INDICES
 			)
-			zonewise_budgets = op.compute_zonewise_budget	(
-				self.modelCalculator.zone_points_dict ,
-				self.modelCalculator.zone_points_dict_ag_missing,
-				self.modelCalculator.zone_points_dict_current_fallow, 
-				self.modelCalculator.zone_points_dict_non_ag_missing_LU,
-				self.modelCalculator.zones_layer
-			)
-			op.output_zonewise_budget_to_csv	(
-				zonewise_budgets,
-				self.modelCalculator.crops,
-				self.rabi_crop_names,
-				self.modelCalculator.currnet_fallow,
-				self.modelCalculator.LULC_pseudo_crops.values(),
-				os.path.join(self.base_path, ZONEWISE_BUDGET_CSV_FILENAME),
-				self.rain_sum_monsoon
-			)
-			op.compute_and_output_cadastral_vulnerability_to_csv(
-				self.crop_names,
-				self.modelCalculator.output_cadastral_points,
-				os.path.join(self.base_path, CADESTRAL_VULNERABILITY_CSV_FILENAME)
-			)
+
+			self.remove_layers()
+
+		self.iface.addVectorLayer(ALL_CUSTERS_SHAPEFILE, 'Project Clusters', 'ogr')
+		for end_date_index in END_DATE_INDICES:
+			op_layer = op.render_and_save_pointwise_output_layer(points_values_dict, end_date_index, DEBUG_OR_TEST_GRADUATED_RENDERING_INTERVAL_POINTS, 'Deficit_by_day_'+str(end_date_index))
+		self.iface.mapCanvas().setExtent(op_layer.extent())
+
+
+			# zonewise_budgets = op.compute_zonewise_budget	(
+			# 	self.modelCalculator.zone_points_dict ,
+			# 	self.modelCalculator.zone_points_dict_ag_missing,
+			# 	self.modelCalculator.zone_points_dict_current_fallow,
+			# 	self.modelCalculator.zone_points_dict_non_ag_missing_LU,
+			# 	self.modelCalculator.zones_layer
+			# )
+			# op.output_zonewise_budget_to_csv	(
+			# 	zonewise_budgets,
+			# 	self.modelCalculator.crops,
+			# 	self.rabi_crop_names,
+			# 	self.modelCalculator.currnet_fallow,
+			# 	self.modelCalculator.LULC_pseudo_crops.values(),
+			# 	os.path.join(self.base_path, ZONEWISE_BUDGET_CSV_FILENAME),
+			# 	self.rain_sum_monsoon
+			# )
+
+			# op.compute_and_output_cadastral_vulnerability_to_csv(
+			# 	self.crop_names,
+			# 	self.modelCalculator.output_cadastral_points,
+			# 	os.path.join(self.base_path, CADESTRAL_VULNERABILITY_CSV_FILENAME)
+			# )
 			# kharif_model_crop_end_output_layer = \
 			# 	op.render_and_save_pointwise_output_layer(
 			# 		pointwise_output_csv_filepath,
@@ -252,16 +271,16 @@ class KharifModel:
 			# 			self.output_configuration['graduated_rendering_interval_points'],
 			# 			shapefile_path=os.path.join(self.base_path, 'kharif_monsoon_et_deficit.shp')
 			# 		)
-			for i in range(len(self.crop_names)):
-				op.compute_and_display_cadastral_vulnerability(
-					self.modelCalculator.cadastral_layer,
-					self.modelCalculator.output_grid_points,
-					self.modelCalculator.output_cadastral_points,
-					i,
-					self.crop_names[i],
-					self.path
-				)
-		print("KM--- %s seconds ---" % (time.time() - start_time))
+			# for i in range(len(self.crop_names)):
+			# 	op.compute_and_display_cadastral_vulnerability(
+			# 		self.modelCalculator.cadastral_layer,
+			# 		self.modelCalculator.output_grid_points,
+			# 		self.modelCalculator.output_cadastral_points,
+			# 		i,
+			# 		self.crop_names[i],
+			# 		self.path
+			# 	)
+		print ("KM--- %s seconds ---" % (time.time() - start_time))
 		print self.plugin_dir
 
 	# self.iface.actionHideAllLayers().trigger()
@@ -287,13 +306,15 @@ class KharifModel:
 		if path != '':
 			self.base_path = self.path = path
 			self.input_layers = {}
-			self.input_layers['zones_layer'] = self.iface.addVectorLayer(os.path.join(path, 'Zones.shp'), 'Zones', 'ogr')
+			self.input_layers['zones_layer'] = self.iface.addVectorLayer(os.path.join(path, 'Villages.shp'), 'Zones', 'ogr')
 			self.input_layers['soil_layer'] = self.iface.addVectorLayer(os.path.join(path, 'Soil.shp'), 'Soil Cover', 'ogr')
 			self.input_layers['lulc_layer'] = self.iface.addVectorLayer(os.path.join(path, 'LULC.shp'), 'Land-Use-Land-Cover', 'ogr')
 			self.input_layers['cadastral_layer'] = self.iface.addVectorLayer(os.path.join(path, 'Cadastral.shp'), 'Cadastral Map', 'ogr')
 			self.input_layers['slope_layer'] = self.iface.addRasterLayer(os.path.join(path, 'Slope.tif'), 'Slope')
 			#~ self.input_layers['drainage_layer'] = self.iface.addRasterLayer(os.path.join(path, 'Drainage.shp'), 'Drainage', 'ogr')
-			data_dir = os.path.join(self.plugin_dir,'Data')
+
+			# data_dir = os.path.join(self.plugin_dir,'Data')
+
 			# self.input_layers['soil_layer'] = self.iface.addVectorLayer(os.path.join(data_dir, 'soil utm.shp'), 'Soil Cover', 'ogr')
 			# self.input_layers['lulc_layer'] = self.iface.addVectorLayer(os.path.join(data_dir, 'lulc utm.shp'), 'Land-Use-Land-Cover', 'ogr')
 			csvreader=csv.reader(open(os.path.join(path, RAINFALL_CSV_FILENAME)))
@@ -352,4 +373,10 @@ class KharifModel:
 					for i in range(1,self.dlg.colour_code_intervals_list_widget.count())
 			]
 
-
+	def remove_layers(self):
+		registry = QgsMapLayerRegistry.instance()
+		registry.removeMapLayer(self.input_layers['zones_layer'].id())
+		registry.removeMapLayer(self.input_layers['soil_layer'].id())
+		registry.removeMapLayer(self.input_layers['lulc_layer'].id())
+		registry.removeMapLayer(self.input_layers['cadastral_layer'].id())
+		registry.removeMapLayer(self.input_layers['slope_layer'].id())

@@ -6,44 +6,41 @@ from collections import OrderedDict
 import numpy as np
 from constants_dicts_lookups import *
 from kharif_model_calculator import *
-from qgis.core import QgsVectorLayer, QgsFeature, QgsField, QgsMapLayerRegistry, QgsSymbolV2, QgsRendererRangeV2, QgsGraduatedSymbolRendererV2, QgsVectorFileWriter
+from qgis.core import QgsVectorLayer, QgsFeature, QgsField, QgsMapLayerRegistry, QgsSymbolV2, QgsRendererRangeV2, QgsGraduatedSymbolRendererV2, QgsVectorFileWriter, QgsGeometry
 
 class KharifModelOutputProcessor:
 
-	def output_point_results_to_csv(self, output_grid_points, pointwise_output_csv_filepath, crops):
-		"""
-		#~ <all_crops> includes actual (selected) crops and also pseudo-crops
-		"""
+	def output_point_results_to_csv(self, output_grid_points, pointwise_output_csv_filepath, crops, end_date_indices):
 		parameters = ['PET-AET', 'Soil Moisture', 'Infiltration', 'Runoff', 'GW Recharge']
 		csvwrite = open(pointwise_output_csv_filepath,'w+b')
 		writer = csv.writer(csvwrite)
-		writer.writerow(['X', 'Y'] + [crops[i]+'-'+parameter+'-'+duration for i in range(len(crops)) for parameter in parameters for duration in ['Monsoon end', 'Crop end']] + ['Vegetation-'+parameter+'-'+duration for parameter in parameters for duration in ['Monsoon end', 'Crop end']])
+		writer.writerow(['X', 'Y'] + [crops[i]+'-'+parameter+'-'+str(duration) for i in range(len(crops)) for parameter in parameters for duration in end_date_indices] + ['Vegetation-'+parameter+'-'+str(duration) for parameter in parameters for duration in end_date_indices])
 		for point in output_grid_points:
 			#~ if not point.zone_polygon:	continue
 			if point.lulc_type in ['agriculture', 'fallow land']:
 				writer.writerow([point.qgsPoint.x(), point.qgsPoint.y()] + 
 								list(itertools.chain(*[
-									[
-									point.budget.runoff_monsoon_end[i], point.budget.runoff_crop_end[i],
-									point.budget.sm_monsoon_end[i], point.budget.sm_crop_end[i],
-									point.budget.infil_monsoon_end[i], point.budget.infil_crop_end[i],
-									point.budget.PET_minus_AET_monsoon_end[i], point.budget.PET_minus_AET_crop_end[i],
-									point.budget.GW_rech_monsoon_end[i], point.budget.GW_rech_crop_end[i]
-									]
+									list(itertools.chain(*[
+										[point.budget.PET_minus_AET_till_date[end_date_index][i]  for end_date_index in end_date_indices],
+										[point.budget.sm_on_date[end_date_index][i]   for end_date_index in end_date_indices],
+										[point.budget.infil_till_date[end_date_index][i]  for end_date_index in end_date_indices],
+										[point.budget.runoff_till_date[end_date_index][i] for end_date_index in end_date_indices],
+										[point.budget.GW_rech_till_date[end_date_index][i]   for end_date_index in end_date_indices]
+									]))
 										for i in range(len(crops))
 								])) +
-								['']*10
+								['']*5
 							)
 			else:
 				writer.writerow([point.qgsPoint.x(), point.qgsPoint.y()] + 
-								['']*(10*len(crops)) +
-								[
-									point.budget.runoff_monsoon_end[0], point.budget.runoff_crop_end[0],
-									point.budget.sm_monsoon_end[0], point.budget.sm_crop_end[0],
-									point.budget.infil_monsoon_end[0], point.budget.infil_crop_end[0],
-									point.budget.PET_minus_AET_monsoon_end[0], point.budget.PET_minus_AET_crop_end[0],
-									point.budget.GW_rech_monsoon_end[0], point.budget.GW_rech_crop_end[0]
-								]
+								['']*(5*len(crops)*len(point.budget.sm_on_date)) +
+								list(itertools.chain(*[
+									[point.budget.PET_minus_AET_till_date[end_date_index][i]  for end_date_index in end_date_indices],
+									[point.budget.sm_on_date[end_date_index][i] for end_date_index in end_date_indices],
+									[point.budget.infil_till_date[end_date_index][i]    for end_date_index in end_date_indices],
+									[point.budget.runoff_till_date[end_date_index][i]   for end_date_index in end_date_indices],
+									[point.budget.GW_rech_till_date[end_date_index][i] for end_date_index in end_date_indices]
+								]))
 							)
 		csvwrite.close()
 	
@@ -108,22 +105,22 @@ class KharifModelOutputProcessor:
 			fallow_points = zone_points_dict_current_fallow[zone_id]
 			no_of_fallow_points = len(fallow_points)
 			
-			if (no_of_fallow_points != 0):
-				zb = zonewise_budgets[zone_name]['currnet fallow'] = Budget()
-				zb.AET_crop_end = np.sum([p.budget.AET_crop_end	for p in fallow_points], 0) / no_of_fallow_points
-				zb.AET_monsoon_end = np.sum([p.budget.AET_monsoon_end	for p in fallow_points], 0) / no_of_fallow_points
-				zb.runoff_monsoon_end = np.sum([p.budget.runoff_monsoon_end	for p in fallow_points], 0) / no_of_fallow_points
-				zb.runoff_crop_end = np.sum([p.budget.runoff_crop_end	for p in fallow_points], 0) / no_of_fallow_points
-				zb.runoff_total = np.sum([p.budget.runoff_total	for p in fallow_points], 0) / no_of_fallow_points			
-				zb.sm_monsoon_end = np.sum([p.budget.sm_monsoon_end	for p in fallow_points], 0) / no_of_fallow_points
-				zb.sm_crop_end = np.sum([p.budget.sm_crop_end	for p in fallow_points], 0) / no_of_fallow_points
-				zb.infil_monsoon_end = np.sum([p.budget.infil_monsoon_end	for p in fallow_points], 0) / no_of_fallow_points
-				zb.AET_crop_end = np.sum([p.budget.AET_crop_end	for p in fallow_points], 0) / no_of_fallow_points
-				zb.GW_rech_monsoon_end = np.sum([p.budget.GW_rech_monsoon_end	for p in fallow_points], 0) / no_of_fallow_points
-				zb.GW_rech_crop_end = np.sum([p.budget.GW_rech_crop_end	for p in fallow_points], 0) / no_of_fallow_points
-				zb.GW_rech_total = np.sum([p.budget.GW_rech_total	for p in fallow_points], 0) / no_of_fallow_points
-				zb.PET_minus_AET_monsoon_end = np.sum([p.budget.PET_minus_AET_monsoon_end	for p in fallow_points], 0) / no_of_fallow_points
-				zb.PET_minus_AET_crop_end = np.sum([p.budget.PET_minus_AET_crop_end	for p in fallow_points], 0) / no_of_fallow_points
+			# if (no_of_fallow_points != 0):
+			# 	zb = zonewise_budgets[zone_name]['currnet fallow'] = Budget()
+			# 	zb.AET_crop_end = np.sum([p.budget.AET_crop_end	for p in fallow_points], 0) / no_of_fallow_points
+			# 	zb.AET_monsoon_end = np.sum([p.budget.AET_monsoon_end	for p in fallow_points], 0) / no_of_fallow_points
+			# 	zb.runoff_monsoon_end = np.sum([p.budget.runoff_monsoon_end	for p in fallow_points], 0) / no_of_fallow_points
+			# 	zb.runoff_crop_end = np.sum([p.budget.runoff_crop_end	for p in fallow_points], 0) / no_of_fallow_points
+			# 	zb.runoff_total = np.sum([p.budget.runoff_total	for p in fallow_points], 0) / no_of_fallow_points
+			# 	zb.sm_monsoon_end = np.sum([p.budget.sm_monsoon_end	for p in fallow_points], 0) / no_of_fallow_points
+			# 	zb.sm_crop_end = np.sum([p.budget.sm_crop_end	for p in fallow_points], 0) / no_of_fallow_points
+			# 	zb.infil_monsoon_end = np.sum([p.budget.infil_monsoon_end	for p in fallow_points], 0) / no_of_fallow_points
+			# 	zb.AET_crop_end = np.sum([p.budget.AET_crop_end	for p in fallow_points], 0) / no_of_fallow_points
+			# 	zb.GW_rech_monsoon_end = np.sum([p.budget.GW_rech_monsoon_end	for p in fallow_points], 0) / no_of_fallow_points
+			# 	zb.GW_rech_crop_end = np.sum([p.budget.GW_rech_crop_end	for p in fallow_points], 0) / no_of_fallow_points
+			# 	zb.GW_rech_total = np.sum([p.budget.GW_rech_total	for p in fallow_points], 0) / no_of_fallow_points
+			# 	zb.PET_minus_AET_monsoon_end = np.sum([p.budget.PET_minus_AET_monsoon_end	for p in fallow_points], 0) / no_of_fallow_points
+			# 	zb.PET_minus_AET_crop_end = np.sum([p.budget.PET_minus_AET_crop_end	for p in fallow_points], 0) / no_of_fallow_points
 
 		for zone_id in  zone_points_dict_non_ag_missing_LU:
 			if(zones_layer.qgsLayer.fieldNameIndex('Zone_name') != -1):
@@ -131,51 +128,51 @@ class KharifModelOutputProcessor:
 			else:
 				zone_name = zone_id
 			
-			no_of_diif_LU_points={}
-			for lulc in  zone_points_dict_non_ag_missing_LU[zone_id]:
-				diif_LU_points =  zone_points_dict_non_ag_missing_LU[zone_id][lulc]
-				no_of_diif_LU_points[lulc] = len(diif_LU_points)
-				if no_of_diif_LU_points[lulc] != 0:
-					zb = zonewise_budgets[zone_name][lulc] = Budget()
-					zb.AET_monsoon_end = np.sum([p.budget.AET_monsoon_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
-					zb.AET_crop_end = np.sum([p.budget.AET_crop_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
-					zb.runoff_monsoon_end = np.sum([p.budget.runoff_monsoon_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
-					zb.runoff_crop_end = np.sum([p.budget.runoff_crop_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
-					zb.runoff_total = np.sum([p.budget.runoff_total	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
-					zb.sm_monsoon_end = np.sum([p.budget.sm_monsoon_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
-					zb.sm_crop_end = np.sum([p.budget.sm_crop_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
-					zb.infil_monsoon_end = np.sum([p.budget.infil_monsoon_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]				
-					zb.GW_rech_monsoon_end = np.sum([p.budget.GW_rech_monsoon_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
-					zb.GW_rech_crop_end = np.sum([p.budget.GW_rech_crop_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]				
-					zb.GW_rech_total = np.sum([p.budget.GW_rech_total	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]				
-					zb.PET_minus_AET_monsoon_end = np.sum([p.budget.PET_minus_AET_monsoon_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
-					zb.PET_minus_AET_crop_end = np.sum([p.budget.PET_minus_AET_crop_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
+			# no_of_diif_LU_points={}
+			# for lulc in  zone_points_dict_non_ag_missing_LU[zone_id]:
+			# 	diif_LU_points =  zone_points_dict_non_ag_missing_LU[zone_id][lulc]
+			# 	no_of_diif_LU_points[lulc] = len(diif_LU_points)
+			# 	if no_of_diif_LU_points[lulc] != 0:
+			# 		zb = zonewise_budgets[zone_name][lulc] = Budget()
+			# 		zb.AET_monsoon_end = np.sum([p.budget.AET_monsoon_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
+			# 		zb.AET_crop_end = np.sum([p.budget.AET_crop_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
+			# 		zb.runoff_monsoon_end = np.sum([p.budget.runoff_monsoon_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
+			# 		zb.runoff_crop_end = np.sum([p.budget.runoff_crop_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
+			# 		zb.runoff_total = np.sum([p.budget.runoff_total	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
+			# 		zb.sm_monsoon_end = np.sum([p.budget.sm_monsoon_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
+			# 		zb.sm_crop_end = np.sum([p.budget.sm_crop_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
+			# 		zb.infil_monsoon_end = np.sum([p.budget.infil_monsoon_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
+			# 		zb.GW_rech_monsoon_end = np.sum([p.budget.GW_rech_monsoon_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
+			# 		zb.GW_rech_crop_end = np.sum([p.budget.GW_rech_crop_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
+			# 		zb.GW_rech_total = np.sum([p.budget.GW_rech_total	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
+			# 		zb.PET_minus_AET_monsoon_end = np.sum([p.budget.PET_minus_AET_monsoon_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
+			# 		zb.PET_minus_AET_crop_end = np.sum([p.budget.PET_minus_AET_crop_end	for p in diif_LU_points], 0) / no_of_diif_LU_points[lulc]
 
-		for zone_id in  zone_points_dict_ag_missing:
-			if(zones_layer.qgsLayer.fieldNameIndex('Zone_name') != -1):
-				zone_name = zones_layer.feature_dict[zone_id]['Zone_name']
-			else:
-				zone_name = zone_id
-			
-			ag_from_non_ag_points = zone_points_dict_ag_missing[zone_id]
-			no_of_ag_from_non_ag_points = len(ag_from_non_ag_points)
-			
-			if (no_of_ag_from_non_ag_points != 0):
-				zb = zonewise_budgets[zone_name]['agricultural'] = Budget()
-				zb.AET_crop_end = np.sum([p.budget.AET_crop_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
-				zb.AET_monsoon_end = np.sum([p.budget.AET_monsoon_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
-				zb.runoff_monsoon_end = np.sum([p.budget.runoff_monsoon_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
-				zb.runoff_crop_end = np.sum([p.budget.runoff_crop_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
-				zb.runoff_total = np.sum([p.budget.runoff_total	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points			
-				zb.sm_monsoon_end = np.sum([p.budget.sm_monsoon_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
-				zb.sm_crop_end = np.sum([p.budget.sm_crop_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
-				zb.infil_monsoon_end = np.sum([p.budget.infil_monsoon_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
-				zb.AET_crop_end = np.sum([p.budget.AET_crop_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
-				zb.GW_rech_monsoon_end = np.sum([p.budget.GW_rech_monsoon_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
-				zb.GW_rech_crop_end = np.sum([p.budget.GW_rech_crop_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
-				zb.GW_rech_total = np.sum([p.budget.GW_rech_total	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
-				zb.PET_minus_AET_monsoon_end = np.sum([p.budget.PET_minus_AET_monsoon_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
-				zb.PET_minus_AET_crop_end = np.sum([p.budget.PET_minus_AET_crop_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
+		# for zone_id in  zone_points_dict_ag_missing:
+		# 	if(zones_layer.qgsLayer.fieldNameIndex('Zone_name') != -1):
+		# 		zone_name = zones_layer.feature_dict[zone_id]['Zone_name']
+		# 	else:
+		# 		zone_name = zone_id
+		#
+		# 	ag_from_non_ag_points = zone_points_dict_ag_missing[zone_id]
+		# 	no_of_ag_from_non_ag_points = len(ag_from_non_ag_points)
+		#
+		# 	if (no_of_ag_from_non_ag_points != 0):
+		# 		zb = zonewise_budgets[zone_name]['agricultural'] = Budget()
+		# 		zb.AET_crop_end = np.sum([p.budget.AET_crop_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
+		# 		zb.AET_monsoon_end = np.sum([p.budget.AET_monsoon_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
+		# 		zb.runoff_monsoon_end = np.sum([p.budget.runoff_monsoon_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
+		# 		zb.runoff_crop_end = np.sum([p.budget.runoff_crop_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
+		# 		zb.runoff_total = np.sum([p.budget.runoff_total	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
+		# 		zb.sm_monsoon_end = np.sum([p.budget.sm_monsoon_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
+		# 		zb.sm_crop_end = np.sum([p.budget.sm_crop_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
+		# 		zb.infil_monsoon_end = np.sum([p.budget.infil_monsoon_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
+		# 		zb.AET_crop_end = np.sum([p.budget.AET_crop_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
+		# 		zb.GW_rech_monsoon_end = np.sum([p.budget.GW_rech_monsoon_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
+		# 		zb.GW_rech_crop_end = np.sum([p.budget.GW_rech_crop_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
+		# 		zb.GW_rech_total = np.sum([p.budget.GW_rech_total	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
+		# 		zb.PET_minus_AET_monsoon_end = np.sum([p.budget.PET_minus_AET_monsoon_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
+		# 		zb.PET_minus_AET_crop_end = np.sum([p.budget.PET_minus_AET_crop_end	for p in ag_from_non_ag_points], 0) / no_of_ag_from_non_ag_points
 
 
 			#~ zb = Budget()
@@ -449,45 +446,53 @@ class KharifModelOutputProcessor:
 		)'''
 	
 	def render_and_save_pointwise_output_layer(self,
-												pointwise_output_csv_filepath, 
-												output_layer_name, 
-												on_values_of_attribute, 
+												points_values_dict,
+                                                end_date_index,
 												graduated_rendering_interval_points,
 												shapefile_path=''
 											):
 		
-		uri = 'file:///' + pointwise_output_csv_filepath + \
-			'?delimiter=%s&crs=epsg:32643&xField=%s&yField=%s' % (',', 'X', 'Y')
-		output_layer = QgsVectorLayer(uri, output_layer_name, 'delimitedtext')
-		
-		if 'Crop' in on_values_of_attribute:
-			ET_D_max = max([point.budget.PET_minus_AET_crop_end	for point in model_calculator.output_grid_points])
-		elif 'Monsoon' in on_values_of_attribute:
-			ET_D_max = max([point.budget.PET_minus_AET_monsoon_end	for point in model_calculator.output_grid_points])
-		
+		deficit_layer = QgsVectorLayer('Point?crs=epsg:32643', 'Total deficit by day ' + str(end_date_index), 'memory')
+		deficit_layer.dataProvider().addAttributes([QgsField('Deficit', QVariant.Double)])
+		deficit_layer.updateFields()
+		fields = deficit_layer.fields()
+		deficit_layer.startEditing()
+		for point, deficits in points_values_dict.items():
+			f = QgsFeature()
+			f.setFields(fields)
+			f.setGeometry(QgsGeometry.fromPoint(point.qgsPoint))
+
+			f.setAttributes([float(deficits[end_date_index][0])])
+		# for feature in deficit_layer.getFeatures():
+		# 	feature['Deficit'] = points_values_dict[feature][end_date_index]
+			deficit_layer.dataProvider().addFeatures([f])
+			deficit_layer.updateFeature(f)
+		deficit_layer.commitChanges()
+
+		ET_D_max = max([v[end_date_index][0]   for v in points_values_dict.values()])
 		graduated_symbol_renderer_range_list = []
 		opacity = 1
 		intervals_count = len(graduated_rendering_interval_points)
 		for i in range(intervals_count):
 			interval_min = 0 if graduated_rendering_interval_points[i] == 0 else (graduated_rendering_interval_points[i]*ET_D_max/100.0 + 0.01)
-			interval_max = (graduated_rendering_interval_points*ET_D_max/100.0)
+			interval_max = (graduated_rendering_interval_points[i+1] * ET_D_max / 100.0) if i+1 < intervals_count else ET_D_max
 			label = "{0:.2f} - {1:.2f}".format(interval_min, interval_max)
 			colour = QColor(int(255*(1-(i+1.0)/(intervals_count+1.0))), 0, 0)	# +1 done to tackle boundary cases
-			symbol = QgsSymbolV2.defaultSymbol(output_layer.geometryType())
+			symbol = QgsSymbolV2.defaultSymbol(deficit_layer.geometryType())
 			symbol.setColor(colour)
 			symbol.setAlpha(opacity)
 			interval_range = QgsRendererRangeV2(interval_min, interval_max, symbol, label)
 			graduated_symbol_renderer_range_list.append(interval_range)
 		renderer = QgsGraduatedSymbolRendererV2('', graduated_symbol_renderer_range_list)
 		renderer.setMode(QgsGraduatedSymbolRendererV2.EqualInterval)
-		renderer.setClassAttribute(on_values_of_attribute)
-		output_layer.setRendererV2(renderer)
-		QgsMapLayerRegistry.instance().addMapLayer(output_layer)
-		
+		renderer.setClassAttribute('Deficit')
+		deficit_layer.setRendererV2(renderer)
+		QgsMapLayerRegistry.instance().addMapLayer(deficit_layer)
+
 		if shapefile_path != '':
-			QgsVectorFileWriter.writeAsVectorFormat(output_layer, shapefile_path, "utf-8", None, "ESRI Shapefile")
+			QgsVectorFileWriter.writeAsVectorFormat(deficit_layer, shapefile_path, "utf-8", None, "ESRI Shapefile")
 		
-		return output_layer
+		return deficit_layer
 
 	def compute_and_output_cadastral_vulnerability_to_csv(self, crop_names, output_cadastral_points, cadastral_vulnerability_csv_filepath):
 		plot_vulnerability_dict = {
