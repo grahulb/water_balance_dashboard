@@ -25,6 +25,7 @@ from PyQt4.QtGui import QAction, QIcon, QFileDialog, QColor
 # Initialize Qt resources from file resources.py
 import resources
 import time
+import itertools
 # Import the code for the dialog
 from kharif_model_dialog import KharifModelDialog
 from kharif_model_output_processor import KharifModelOutputProcessor
@@ -34,7 +35,7 @@ from kharif_model_calculator import KharifModelCalculator
 from qgis.core import QgsMapLayerRegistry, QgsVectorLayer, QgsSymbolV2, QgsRendererRangeV2, QgsGraduatedSymbolRendererV2, QgsVectorFileWriter
 from constants_dicts_lookups import *
 from configuration import *
-from collections import OrderedDict
+import numpy
 
 class KharifModel:
 	"""QGIS Plugin Implementation."""
@@ -192,47 +193,37 @@ class KharifModel:
 		"""Run method that performs all the real work"""
 
 		start_time = time.time()
-		
-		if PLUGIN_MODE == 'DEBUG':
-			if not os.path.exists(DEBUG_BASE_FOLDER_PATH):	raise Exception('Set DEBUG_BASE_FOLDER_PATH for the debug dataset')
-			paths = [DEBUG_BASE_FOLDER_PATH]
-		elif PLUGIN_MODE == 'REAL':
-			paths = ['']
-		else:
-			if not os.path.exists(TEST_SUITE_BASE_FOLDER_PATH):	raise Exception('Set TEST_SUITE_BASE_FOLDER_PATH for the debug dataset')
-			paths = [os.path.join(TEST_SUITE_BASE_FOLDER_PATH, base_path)	for base_path in os.listdir(TEST_SUITE_BASE_FOLDER_PATH)	if os.path.isdir(os.path.join(TEST_SUITE_BASE_FOLDER_PATH, base_path))]
 
-		points_values_dict = {};    i = 0
-		for path in paths:
-			i += 1
-			print 'Cluster ', i, '/', len(paths), ' : ', path
-			if self.fetch_inputs(path) is False:	return
-			self.modelCalculator = KharifModelCalculator(self.path, self.et0, **self.input_layers)
-			self.modelCalculator.calculate(self.rain, self.sowing_threshold, end_date_indices=END_DATE_INDICES)
+		if READ_FROM_POINTS_DATA_FILE:
+			reader = csv.DictReader(open(REGION_POINTS_DATA_FILE_PATH, 'r'))
+			points_data = list(reader)
+		self.fetch_inputs(REGION_DATA_FILES_PATH)
+		self.modelCalculator = KharifModelCalculator(self.path, self.et0, points_data=points_data, **self.input_layers)
+		self.modelCalculator.calculate(self.rain, self.sowing_threshold, end_date_indices=END_DATE_INDICES)
 
-			for point in self.modelCalculator.output_grid_points:
-				points_values_dict[point] = point.budget.PET_minus_AET_till_date
-			print 'Total points processed till now : ', len(points_values_dict)
+		# points_values_dict = {point: point.budget.PET_minus_AET_till_date   for point in self.modelCalculator.output_grid_points if not point.is_no_evaluation_point}
 
-			pointwise_output_csv_filepath = os.path.join(self.base_path, POINTWISE_OUTPUT_CSV_FILENAME)
+		# pointwise_output_csv_filepath = os.path.join(self.base_path, POINTWISE_OUTPUT_CSV_FILENAME)
+		#
+		op = KharifModelOutputProcessor()
+		# op.output_point_results_to_csv	(
+         #    self.modelCalculator.output_grid_points,
+		# 	pointwise_output_csv_filepath,
+		# 	[crop.name for crop in self.modelCalculator.crops],
+		# 	END_DATE_INDICES
+		# )
+		#
+		# self.remove_layers()
 
-			op = KharifModelOutputProcessor()
-			op.output_point_results_to_csv	(
- 				self.modelCalculator.output_grid_points,
-				pointwise_output_csv_filepath,
-				[crop.name for crop in self.modelCalculator.crops],
-				END_DATE_INDICES
-			)
-
-			self.remove_layers()
-
-		self.iface.addVectorLayer(ALL_CUSTERS_SHAPEFILE, 'Project Clusters', 'ogr')
 		for end_date_index in END_DATE_INDICES:
-			op_layer = op.render_and_save_pointwise_output_layer(points_values_dict, end_date_index, DEBUG_OR_TEST_GRADUATED_RENDERING_INTERVAL_POINTS, 'Deficit_by_day_'+str(end_date_index))
-		self.iface.mapCanvas().setExtent(op_layer.extent())
+			layer_name = 'Deficit_on_day_' + str(end_date_index)
+			save_file_path = os.path.join(REGION_DATA_FILES_PATH, layer_name + '.tif')
+			op.save_pointwise_deficit_as_raster(self.iface, self.modelCalculator.points_grid, end_date_index, save_file_path, layer_name)
 
+			# op_layer = op.render_and_save_pointwise_output_layer(points_values_dict, end_date_index, DEBUG_OR_TEST_GRADUATED_RENDERING_INTERVAL_POINTS, 'Deficit_by_day_'+str(end_date_index))
+		# self.iface.mapCanvas().setExtent(op_layer.extent())
 
-			# zonewise_budgets = op.compute_zonewise_budget	(
+		# zonewise_budgets = op.compute_zonewise_budget	(
 			# 	self.modelCalculator.zone_points_dict ,
 			# 	self.modelCalculator.zone_points_dict_ag_missing,
 			# 	self.modelCalculator.zone_points_dict_current_fallow,
@@ -281,7 +272,6 @@ class KharifModel:
 			# 		self.path
 			# 	)
 		print ("KM--- %s seconds ---" % (time.time() - start_time))
-		print self.plugin_dir
 
 	# self.iface.actionHideAllLayers().trigger()
 	# 	self.iface.legendInterface().setLayerVisible(self.input_layers['zones_layer'], True)
@@ -295,88 +285,40 @@ class KharifModel:
 			#~ QTimer.singleShot(1000, lambda :	self.iface.mapCanvas().saveAsImage(self.dlg.save_image_filename.text()))
 	
 	def fetch_inputs(self, path):
-		def set_et0_from_et0_file_data(et0_file_data):
-			et0 = []
-			for i in range (0,len(et0_file_data)):
-				if (i in [0,3,5,10]):	et0.extend([et0_file_data[i]]*30)
-				elif i == 8:		et0.extend([et0_file_data[i]]*28)
-				else:					et0.extend([et0_file_data[i]]*31)
-			return et0
-		self.rain=OrderedDict()
-		if path != '':
-			self.base_path = self.path = path
-			self.input_layers = {}
+		self.base_path = self.path = path
+		self.input_layers = {}
+
+		self.iface.addVectorLayer(os.path.join(path, REGION_SHAPEFILE), 'Zones', 'ogr')
+		if not READ_FROM_POINTS_DATA_FILE:
+			print 'Loading Zones Layer'
 			self.input_layers['zones_layer'] = self.iface.addVectorLayer(os.path.join(path, 'Villages.shp'), 'Zones', 'ogr')
+			print 'Loading Soil Layer'
 			self.input_layers['soil_layer'] = self.iface.addVectorLayer(os.path.join(path, 'Soil.shp'), 'Soil Cover', 'ogr')
+			print 'Loading LULC Layer'
 			self.input_layers['lulc_layer'] = self.iface.addVectorLayer(os.path.join(path, 'LULC.shp'), 'Land-Use-Land-Cover', 'ogr')
-			self.input_layers['cadastral_layer'] = self.iface.addVectorLayer(os.path.join(path, 'Cadastral.shp'), 'Cadastral Map', 'ogr')
+			print 'Loading Slope Layer'
 			self.input_layers['slope_layer'] = self.iface.addRasterLayer(os.path.join(path, 'Slope.tif'), 'Slope')
-			#~ self.input_layers['drainage_layer'] = self.iface.addRasterLayer(os.path.join(path, 'Drainage.shp'), 'Drainage', 'ogr')
 
-			# data_dir = os.path.join(self.plugin_dir,'Data')
+		print 'Fetching rainfall data'
+		with open(os.path.join(ET0_AND_RAINFALL_MASTER_FILES_PATH, 'Rainfall.csv'), 'r') as f:
+			reader = csv.reader(f)
+			reader.next()
+			self.rain = {(row[0], row[1], row[2], row[3]): numpy.array([float(v)    for v in row[4:]])   for row in reader}
 
-			# self.input_layers['soil_layer'] = self.iface.addVectorLayer(os.path.join(data_dir, 'soil utm.shp'), 'Soil Cover', 'ogr')
-			# self.input_layers['lulc_layer'] = self.iface.addVectorLayer(os.path.join(data_dir, 'lulc utm.shp'), 'Land-Use-Land-Cover', 'ogr')
-			csvreader=csv.reader(open(os.path.join(path, RAINFALL_CSV_FILENAME)))
-			next(csvreader)
-			self.rain = OrderedDict((row[0].lower(),{'year': row[1],'daily_rain':[float(val) for val in row[2:]]}) for row in csvreader)
-			self.rain['0'] = self.rain[next(iter(self.rain.keys()))]
+		print 'Fetching ET0 data'
+		with open(os.path.join(ET0_AND_RAINFALL_MASTER_FILES_PATH, 'ET0.csv'), 'r') as f:
+			reader = csv.DictReader(f)
+			self.et0 = {
+				row['District']: list(itertools.chain(*[
+					[float(row['Jun'])] * 30, [float(row['Jul'])] * 31, [float(row['Aug'])] * 31,
+					[float(row['Sep'])] * 30, [float(row['Oct'])] * 31, [float(row['Nov'])] * 30,
+					[float(row['Dec'])] * 31, [float(row['Jan'])] * 31,	[float(row['Feb'])] * 28,
+					[float(row['Mar'])] * 31, [float(row['Apr'])] * 30, [float(row['May'])] * 31
+				]))	for row in reader
+			}
 
-			et0_file_data =  [float(row["ET0"]) for row in csv.DictReader(open(os.path.join(path, ET0_CSV_FILENAME)))]
-			self.et0 = set_et0_from_et0_file_data(et0_file_data)
-			self.sowing_threshold = DEFAULT_SOWING_THRESHOLD
-			self.monsoon_end_date_index = MONSOON_END_DATE_INDEX
-			self.rain_sum_monsoon={key:{'year':self.rain[key]['year'],'sum':sum(self.rain[key]['daily_rain'][START_DATE_INDEX : self.monsoon_end_date_index+1])} for key in self.rain.keys()}
+		self.sowing_threshold = DEFAULT_SOWING_THRESHOLD
+		self.monsoon_end_date_index = MONSOON_END_DATE_INDEX
 
-			if not OVERRIDE_FILECROPS_BY_DEBUG_OR_TEST_CROPS and os.path.exists(os.path.join(path, CROPS_FILENAME)):
-				self.crop_names = open(os.path.join(path, CROPS_FILENAME), 'r').read().split(',')
-				print (self.crop_names)
-				if len(self.crop_names) == 0 :	raise Exception('No crop selected')
-			else:
-				self.crop_names = DEBUG_OR_TEST_CROPS
-			self.rabi_crop_names = DEBUG_OR_TEST_RABI_CROPS
-			self.output_configuration = {}
-			self.output_configuration['graduated_rendering_interval_points'] = DEBUG_OR_TEST_GRADUATED_RENDERING_INTERVAL_POINTS
-			
-		else:
-			self.dlg.show()
-			if self.dlg.exec_() == QFileDialog.Rejected:	return False
-			
-			path = self.path = self.base_path = self.dlg.folder_path.text()
-			self.input_layers = {}
-			self.input_layers['zones_layer'] = self.iface.addVectorLayer(self.dlg.zones_layer_filename.text(), 'Zones', 'ogr')
-			self.input_layers['soil_layer'] = self.iface.addVectorLayer(self.dlg.soil_layer_filename.text(), 'Soil Cover', 'ogr')
-			self.input_layers['lulc_layer'] = self.iface.addVectorLayer(self.dlg.lulc_layer_filename.text(), 'Land-Use-Land-Cover', 'ogr')
-			self.input_layers['cadastral_layer'] = self.iface.addVectorLayer(self.dlg.cadastral_layer_filename.text(), 'Cadastral Map', 'ogr')
-			self.input_layers['slope_layer'] = self.iface.addRasterLayer(self.dlg.slope_layer_filename.text(), 'Slope')
-			if self.dlg.drainage_layer_filename.text() != '':
-				self.drainage_layer = self.iface.addVectorLayer(self.dlg.drainage_layer_filename.text(), 'Drainage', 'ogr')
-
-
-			csvreader=csv.reader(open(str(self.dlg.rainfall_csv_filename.text())))
-			next(csvreader)
-			self.rain = OrderedDict((row[0].lower(),{'year': row[1],'daily_rain':[float(val) for val in row[2:]]}) for row in csvreader)
-			self.rain['0'] = self.rain[next(iter(self.rain.keys()))]
-
-			et0_file_data = [float(row["ET0"]) for row in csv.DictReader(open(os.path.join(path, ET0_CSV_FILENAME)))]
-			self.et0 = set_et0_from_et0_file_data(et0_file_data)
-			self.sowing_threshold = self.dlg.sowing_threshold.value()
-			self.monsoon_end_date_index = self.dlg.monsoon_end.value()+122
-			self.rain_sum_monsoon={key:{'year':self.rain[key]['year'],'sum':sum(self.rain[key]['daily_rain'][START_DATE_INDEX : self.monsoon_end_date_index+1])} for key in self.rain.keys()}
-
-			self.crop_names = self.dlg.crops
-			self.rabi_crop_names = self.dlg.rabi_crops
-			if len(self.crop_names) == 0:    raise Exception('No crop selected')
-			self.output_configuration = {}
-			self.output_configuration['graduated_rendering_interval_points'] = [
-				int(self.dlg.colour_code_intervals_list_widget.item(i).text().split('-')[0])
-					for i in range(1,self.dlg.colour_code_intervals_list_widget.count())
-			]
-
-	def remove_layers(self):
-		registry = QgsMapLayerRegistry.instance()
-		registry.removeMapLayer(self.input_layers['zones_layer'].id())
-		registry.removeMapLayer(self.input_layers['soil_layer'].id())
-		registry.removeMapLayer(self.input_layers['lulc_layer'].id())
-		registry.removeMapLayer(self.input_layers['cadastral_layer'].id())
-		registry.removeMapLayer(self.input_layers['slope_layer'].id())
+		self.output_configuration = {}
+		self.output_configuration['graduated_rendering_interval_points'] = DEBUG_OR_TEST_GRADUATED_RENDERING_INTERVAL_POINTS
