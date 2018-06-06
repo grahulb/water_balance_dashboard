@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>622</width>
-    <height>571</height>
+    <height>680</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,8 +16,8 @@
   <widget class="QDialogButtonBox" name="buttonBox">
    <property name="geometry">
     <rect>
-     <x>230</x>
-     <y>530</y>
+     <x>440</x>
+     <y>640</y>
      <width>156</width>
      <height>23</height>
     </rect>
@@ -33,9 +33,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>10</y>
+     <y>40</y>
      <width>601</width>
-     <height>321</height>
+     <height>191</height>
     </rect>
    </property>
    <property name="title">
@@ -47,165 +47,11 @@
    <property name="checkable">
     <bool>false</bool>
    </property>
-   <widget class="QLineEdit" name="rainfall_csv_filename">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>240</y>
-      <width>191</width>
-      <height>20</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="rainfall_csv_browse">
-    <property name="geometry">
-     <rect>
-      <x>230</x>
-      <y>240</y>
-      <width>51</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Browse</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="cadastral_layer_filename">
-    <property name="geometry">
-     <rect>
-      <x>320</x>
-      <y>140</y>
-      <width>191</width>
-      <height>20</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="lulc_layer_browse">
-    <property name="geometry">
-     <rect>
-      <x>230</x>
-      <y>140</y>
-      <width>51</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Browse</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="lulc_layer_filename">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>140</y>
-      <width>191</width>
-      <height>20</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="soil_layer_filename">
-    <property name="geometry">
-     <rect>
-      <x>320</x>
-      <y>90</y>
-      <width>191</width>
-      <height>20</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="zones_layer_filename">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>92</y>
-      <width>191</width>
-      <height>20</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="cadastral_layer_browse">
-    <property name="geometry">
-     <rect>
-      <x>530</x>
-      <y>140</y>
-      <width>51</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Browse</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="soil_layer_browse">
-    <property name="geometry">
-     <rect>
-      <x>530</x>
-      <y>90</y>
-      <width>51</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Browse</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_3">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>120</y>
-      <width>221</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>LULC Vector Layer :</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>72</y>
-      <width>145</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Zones Vector Layer :</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="zones_layer_browse">
-    <property name="geometry">
-     <rect>
-      <x>230</x>
-      <y>90</y>
-      <width>51</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Browse</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_2">
-    <property name="geometry">
-     <rect>
-      <x>321</x>
-      <y>72</y>
-      <width>161</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Soil Cover Vector Layer :</string>
-    </property>
-   </widget>
    <widget class="QLabel" name="label_5">
     <property name="geometry">
      <rect>
-      <x>320</x>
-      <y>220</y>
+      <x>290</x>
+      <y>20</y>
       <width>41</width>
       <height>16</height>
      </rect>
@@ -214,79 +60,17 @@
      <string>Crops :</string>
     </property>
    </widget>
-   <widget class="QLabel" name="label_6">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>220</y>
-      <width>121</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Daily Rainfall CSV File :</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_4">
-    <property name="geometry">
-     <rect>
-      <x>320</x>
-      <y>120</y>
-      <width>181</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Cadastral Map Vector Layer :</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="slope_layer_browse">
-    <property name="geometry">
-     <rect>
-      <x>230</x>
-      <y>190</y>
-      <width>51</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Browse</string>
-    </property>
-   </widget>
    <widget class="QLabel" name="label_9">
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>170</y>
+      <y>80</y>
       <width>98</width>
       <height>16</height>
      </rect>
     </property>
     <property name="text">
-     <string>Slope Raster Layer :</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="slope_layer_filename">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>190</y>
-      <width>191</width>
-      <height>20</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="folder_path_browse">
-    <property name="geometry">
-     <rect>
-      <x>530</x>
-      <y>40</y>
-      <width>51</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Browse</string>
+     <string>Rainfall</string>
     </property>
    </widget>
    <widget class="QLabel" name="label_10">
@@ -294,93 +78,21 @@
      <rect>
       <x>20</x>
       <y>20</y>
-      <width>91</width>
+      <width>201</width>
       <height>16</height>
      </rect>
     </property>
     <property name="text">
-     <string>Data-set Folder :</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="folder_path">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>40</y>
-      <width>491</width>
-      <height>20</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_11">
-    <property name="geometry">
-     <rect>
-      <x>320</x>
-      <y>170</y>
-      <width>151</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Drainage Vector Layer :</string>
-    </property>
-   </widget>
-   <widget class="QLineEdit" name="drainage_layer_filename">
-    <property name="geometry">
-     <rect>
-      <x>320</x>
-      <y>190</y>
-      <width>191</width>
-      <height>20</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="drainage_layer_browse">
-    <property name="geometry">
-     <rect>
-      <x>530</x>
-      <y>190</y>
-      <width>51</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Browse</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="crops_select_button">
-    <property name="geometry">
-     <rect>
-      <x>530</x>
-      <y>240</y>
-      <width>51</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Select</string>
-    </property>
-   </widget>
-   <widget class="QTextEdit" name="selected_crops">
-    <property name="geometry">
-     <rect>
-      <x>320</x>
-      <y>240</y>
-      <width>191</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="readOnly">
-     <bool>true</bool>
+     <string>Select  District</string>
     </property>
    </widget>
    <widget class="QLabel" name="label_12">
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>270</y>
-      <width>111</width>
-      <height>16</height>
+      <y>140</y>
+      <width>131</width>
+      <height>21</height>
      </rect>
     </property>
     <property name="text">
@@ -390,9 +102,9 @@
    <widget class="QLabel" name="label_13">
     <property name="geometry">
      <rect>
-      <x>140</x>
-      <y>270</y>
-      <width>171</width>
+      <x>290</x>
+      <y>80</y>
+      <width>181</width>
       <height>16</height>
      </rect>
     </property>
@@ -403,8 +115,8 @@
    <widget class="QSpinBox" name="sowing_threshold">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>290</y>
+      <x>20</x>
+      <y>160</y>
       <width>61</width>
       <height>22</height>
      </rect>
@@ -416,8 +128,8 @@
    <widget class="QSpinBox" name="monsoon_end">
     <property name="geometry">
      <rect>
-      <x>190</x>
-      <y>290</y>
+      <x>290</x>
+      <y>100</y>
       <width>71</width>
       <height>22</height>
      </rect>
@@ -426,113 +138,60 @@
      <number>31</number>
     </property>
    </widget>
-   <widget class="QLabel" name="label_14">
+   <widget class="QComboBox" name="district_selected">
     <property name="geometry">
      <rect>
-      <x>320</x>
-      <y>270</y>
-      <width>91</width>
-      <height>16</height>
+      <x>20</x>
+      <y>40</y>
+      <width>181</width>
+      <height>27</height>
      </rect>
     </property>
-    <property name="text">
-     <string>Rabi Crops:</string>
-    </property>
    </widget>
-   <widget class="QTextEdit" name="selected_rabi_crops">
+   <widget class="QComboBox" name="rainfall_year">
     <property name="geometry">
      <rect>
-      <x>320</x>
-      <y>290</y>
+      <x>20</x>
+      <y>100</y>
+      <width>85</width>
+      <height>27</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="selected_crop">
+    <property name="geometry">
+     <rect>
+      <x>290</x>
+      <y>40</y>
       <width>191</width>
-      <height>21</height>
+      <height>27</height>
      </rect>
     </property>
-    <property name="readOnly">
-     <bool>true</bool>
-    </property>
    </widget>
-   <widget class="QPushButton" name="rabi_crops_select_button">
-    <property name="geometry">
-     <rect>
-      <x>530</x>
-      <y>290</y>
-      <width>51</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Select</string>
-    </property>
-   </widget>
+   <zorder>label_5</zorder>
+   <zorder>label_9</zorder>
+   <zorder>label_10</zorder>
+   <zorder>label_12</zorder>
+   <zorder>label_13</zorder>
+   <zorder>sowing_threshold</zorder>
+   <zorder>monsoon_end</zorder>
+   <zorder>district_selected</zorder>
+   <zorder>rainfall_year</zorder>
+   <zorder>selected_crop</zorder>
+   <zorder>groupBox</zorder>
   </widget>
   <widget class="QGroupBox" name="groupBox">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>330</y>
+     <y>250</y>
      <width>601</width>
-     <height>181</height>
+     <height>261</height>
     </rect>
    </property>
    <property name="title">
     <string>Output</string>
    </property>
-   <widget class="QGroupBox" name="save_image_group_box">
-    <property name="geometry">
-     <rect>
-      <x>30</x>
-      <y>120</y>
-      <width>541</width>
-      <height>61</height>
-     </rect>
-    </property>
-    <property name="title">
-     <string>Save As Image In</string>
-    </property>
-    <property name="checkable">
-     <bool>true</bool>
-    </property>
-    <property name="checked">
-     <bool>false</bool>
-    </property>
-    <widget class="QPushButton" name="save_image_browse">
-     <property name="geometry">
-      <rect>
-       <x>440</x>
-       <y>20</y>
-       <width>75</width>
-       <height>23</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Browse</string>
-     </property>
-    </widget>
-    <widget class="QLineEdit" name="save_image_filename">
-     <property name="geometry">
-      <rect>
-       <x>90</x>
-       <y>20</y>
-       <width>321</width>
-       <height>20</height>
-      </rect>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_7">
-     <property name="geometry">
-      <rect>
-       <x>30</x>
-       <y>20</y>
-       <width>46</width>
-       <height>13</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Location :</string>
-     </property>
-    </widget>
-   </widget>
    <widget class="QGroupBox" name="groupBox_3">
     <property name="geometry">
      <rect>
@@ -543,9 +202,9 @@
      </rect>
     </property>
     <property name="title">
-     <string>Colour-code intervals for ET-Deficit map :</string>
+     <string>Output Deficit Date :</string>
     </property>
-    <widget class="QPushButton" name="colour_code_intervals_split_button">
+    <widget class="QPushButton" name="output_deficit_add_button">
      <property name="geometry">
       <rect>
        <x>220</x>
@@ -558,10 +217,10 @@
       <string>Splits the interval containing the selected value</string>
      </property>
      <property name="text">
-      <string>&gt;&gt; Split</string>
+      <string>&gt;&gt; Add</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="colour_code_intervals_merge_button">
+    <widget class="QPushButton" name="output_deficit_remove_button">
      <property name="geometry">
       <rect>
        <x>220</x>
@@ -574,10 +233,10 @@
       <string>Merges with previous interval</string>
      </property>
      <property name="text">
-      <string>Merge &lt;&lt;</string>
+      <string>Remove&lt;&lt;</string>
      </property>
     </widget>
-    <widget class="QListWidget" name="colour_code_intervals_list_widget">
+    <widget class="QListWidget" name="output_deficit_list_widget">
      <property name="geometry">
       <rect>
        <x>320</x>
@@ -599,32 +258,81 @@
     <widget class="QLabel" name="label_8">
      <property name="geometry">
       <rect>
-       <x>20</x>
+       <x>0</x>
        <y>40</y>
-       <width>101</width>
-       <height>16</height>
+       <width>131</width>
+       <height>20</height>
       </rect>
      </property>
      <property name="text">
       <string>Split an interval at : </string>
      </property>
     </widget>
-    <widget class="QSpinBox" name="colour_code_intervals_split_value_spin_box">
-     <property name="geometry">
-      <rect>
-       <x>130</x>
-       <y>40</y>
-       <width>42</width>
-       <height>22</height>
-      </rect>
-     </property>
-     <property name="minimum">
-      <number>1</number>
-     </property>
-     <property name="value">
-      <number>50</number>
-     </property>
-    </widget>
+   </widget>
+   <widget class="QCalendarWidget" name="output_deficit_date">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>100</y>
+      <width>541</width>
+      <height>171</height>
+     </rect>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="save_image_group_box">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>570</y>
+     <width>541</width>
+     <height>61</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Save As Image In</string>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <widget class="QPushButton" name="save_image_browse">
+    <property name="geometry">
+     <rect>
+      <x>440</x>
+      <y>20</y>
+      <width>75</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Browse</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="save_image_filename">
+    <property name="geometry">
+     <rect>
+      <x>90</x>
+      <y>20</y>
+      <width>321</width>
+      <height>20</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_7">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>20</y>
+      <width>46</width>
+      <height>13</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Location :</string>
+    </property>
    </widget>
   </widget>
  </widget>

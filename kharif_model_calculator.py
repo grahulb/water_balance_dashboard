@@ -382,7 +382,7 @@ class KharifModelCalculator:
 				point.slope = self.slope_layer.dataProvider().identify(
 					point.qgsPoint, QgsRaster.IdentifyFormatValue).results()[1]
 
-	def filter_out_points_with_incomplete_data(self, points):
+	def filter_out_points_with_incomplete_data(self, points,year):
 		log_file = open(os.path.join(self.path, 'log'), 'a')
 		log_file.write('\n' + time.ctime(time.time()) + '\n')
 		if READ_FROM_POINTS_DATA_FILE:
@@ -422,11 +422,15 @@ class KharifModelCalculator:
 	def calculate(self,
 					rain,
 					sowing_threshold,
+					year,
 					start_date_index=START_DATE_INDEX,
-                    end_date_indices=[END_DATE_INDEX]
+
+                    end_date_indices=[END_DATE_INDEX],
+                    
 				):
 		
 		self.rain = rain
+		self.rain_year=year
 
 		self.points_grid = self.generate_output_points_grid()
 		self.output_grid_points = list(itertools.chain(*self.points_grid))
@@ -439,9 +443,9 @@ class KharifModelCalculator:
 			self.set_slope_at_points(self.output_grid_points)
 			print 'Setting slope'
 		if READ_FROM_POINTS_DATA_FILE:
-			self.filter_out_points_with_incomplete_data(self.points_grid)
+			self.filter_out_points_with_incomplete_data(self.points_grid,self.rain_year)
 		else:
-			self.filter_out_points_with_incomplete_data(self.output_grid_points)
+			self.filter_out_points_with_incomplete_data(self.output_grid_points,self.rain_year)
 		print 'Number of grid points to process : ', len([p for p in self.output_grid_points if not p.is_no_evaluation_point])
 		if READ_FROM_POINTS_DATA_FILE:
 			for points_row in self.points_grid:
@@ -475,10 +479,11 @@ class KharifModelCalculator:
 						# if count > 680: print j, ' within condition', len(summarized)
 						continue
 					count += 1
+					print count, '/', total_points
 					if count % 100 == 0:
 						print count, '/', total_points
 					try:
-						rain_at_point = rain[(point.district, point.taluka, point.rain_circle, YEAR)]
+						rain_at_point = rain[(point.district, point.taluka, point.rain_circle, year)]
 					except:
 						# point.is_no_evaluation_point = True
 						# print "Helllllllo !!"
