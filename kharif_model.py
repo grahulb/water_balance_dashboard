@@ -27,7 +27,7 @@ import resources
 import time
 import itertools
 # Import the code for the dialog
-from kharif_model_dialog import KharifModelDialog
+from kharif_model_dialog import KharifModelDialog, KharifModelProgressDialog
 from kharif_model_output_processor import KharifModelOutputProcessor
 import os.path, csv
 # Import code for the calculation
@@ -142,7 +142,7 @@ class KharifModel:
 		"""
 
 		# Create the dialog (after translation) and keep reference
-		self.dlg = KharifModelDialog(crops=dict_crop.keys())
+		self.dlg = KharifModelDialog()
 
 		icon = QIcon(icon_path)
 		action = QAction(icon, text, parent)
@@ -191,139 +191,58 @@ class KharifModel:
 
 	def run(self):
 		"""Run method that performs all the real work"""
-		# tal_dist_list=[]
-		# for pair in tal_dist:
-		# 	tal_dist_list.append(pair)
-
-		
-		# self.dlg.dist_tal_pair.clear()
-		# self.dlg.dist_tal_pair.addItems(tal_dist_list)
-
-		# show the dialog
+		# show the dialog and get user response by executing its event-loop
 		self.dlg.show()
-		# Run the dialog event loop
-		result = self.dlg.exec_()
-		# See if OK was pressed
-		if result:
-			# Do something useful here - delete the line containing pass and
-			# substitute with your code.
-			#pass
+		if self.dlg.exec_() == QFileDialog.Rejected:    return False
 
-			start_time = time.time()
+		start_time = time.time()
 
-			if READ_FROM_POINTS_DATA_FILE:
-				reader = csv.DictReader(open(REGION_POINTS_DATA_FILE_PATH, 'r'))
-				points_data = list(reader)
-			self.fetch_inputs(REGION_DATA_FILES_PATH)
-			self.modelCalculator = KharifModelCalculator(self.path, self.et0, points_data=points_data, **self.input_layers)
-			self.modelCalculator.calculate(self.rain, self.sowing_threshold,self.rain_year,end_date_indices=END_DATE_INDICES)
+		self.progress_dlg = KharifModelProgressDialog()
+		self.progress_dlg.show()
+		self.progress_dlg.progress_text.setText('Reading roster of grid-points...')
+		self.progress_dlg.progress_bar.setValue(0)
+		points_data = None
+		if READ_FROM_POINTS_DATA_FILE:
+			reader = csv.DictReader(open(REGION_POINTS_DATA_FILE_PATH, 'r'))
+			points_data = list(reader)
 
-			# points_values_dict = {point: point.budget.PET_minus_AET_till_date   for point in self.modelCalculator.output_grid_points if not point.is_no_evaluation_point}
+		self.fetch_inputs()
+		self.modelCalculator = KharifModelCalculator(self.et0, self.crop_name, points_data=points_data, **self.input_layers)
+		self.modelCalculator.calculate(self.rain, self.sowing_threshold, self.rain_year, self.end_date_indices, self.progress_dlg)
 
-			# pointwise_output_csv_filepath = os.path.join(self.base_path, POINTWISE_OUTPUT_CSV_FILENAME)
-			#
-			op = KharifModelOutputProcessor()
-			# op.output_point_results_to_csv	(
-			 #    self.modelCalculator.output_grid_points,
-			# 	pointwise_output_csv_filepath,
-			# 	[crop.name for crop in self.modelCalculator.crops],
-			# 	END_DATE_INDICES
-			# )
-			#
-			# self.remove_layers()
+		if self.progress_dlg.aborted:   self.progress_dlg.close(); return
+		self.progress_dlg.close();
 
-			for end_date_index in END_DATE_INDICES:
-				layer_name = 'Deficit_on_day_' + str(end_date_index)
-				save_file_path = os.path.join(REGION_DATA_FILES_PATH, layer_name + '.tif')
-				op.save_pointwise_deficit_as_raster(self.iface, self.modelCalculator.points_grid, end_date_index, save_file_path, layer_name)
+		op = KharifModelOutputProcessor()
 
-				# op_layer = op.render_and_save_pointwise_output_layer(points_values_dict, end_date_index, DEBUG_OR_TEST_GRADUATED_RENDERING_INTERVAL_POINTS, 'Deficit_by_day_'+str(end_date_index))
-			# self.iface.mapCanvas().setExtent(op_layer.extent())
+		for end_date_index in self.end_date_indices:
+			layer_name = 'Deficit_on_day_' + str(end_date_index)
+			save_file_path = os.path.join(REGION_DATA_FILES_PATH, layer_name + '.tif')
+			op.save_pointwise_deficit_as_raster(self.iface, self.modelCalculator.points_grid, end_date_index, save_file_path, layer_name)
 
-			# zonewise_budgets = op.compute_zonewise_budget	(
-				# 	self.modelCalculator.zone_points_dict ,
-				# 	self.modelCalculator.zone_points_dict_ag_missing,
-				# 	self.modelCalculator.zone_points_dict_current_fallow,
-				# 	self.modelCalculator.zone_points_dict_non_ag_missing_LU,
-				# 	self.modelCalculator.zones_layer
-				# )
-				# op.output_zonewise_budget_to_csv	(
-				# 	zonewise_budgets,
-				# 	self.modelCalculator.crops,
-				# 	self.rabi_crop_names,
-				# 	self.modelCalculator.currnet_fallow,
-				# 	self.modelCalculator.LULC_pseudo_crops.values(),
-				# 	os.path.join(self.base_path, ZONEWISE_BUDGET_CSV_FILENAME),
-				# 	self.rain_sum_monsoon
-				# )
+		print ("KM--- %s seconds ---" % (time.time() - start_time))
 
-				# op.compute_and_output_cadastral_vulnerability_to_csv(
-				# 	self.crop_names,
-				# 	self.modelCalculator.output_cadastral_points,
-				# 	os.path.join(self.base_path, CADESTRAL_VULNERABILITY_CSV_FILENAME)
-				# )
-				# kharif_model_crop_end_output_layer = \
-				# 	op.render_and_save_pointwise_output_layer(
-				# 		pointwise_output_csv_filepath,
-				# 		'Kharif Model Crop End Output',
-				# 		'Crop duration PET-AET',
-				# 		self.output_configuration['graduated_rendering_interval_points'],
-				# 		shapefile_path=os.path.join(self.base_path, 'kharif_crop_duration_et_deficit.shp')
-				# 	)
-				# if(crop in long_kharif_crops):
-				# 	kharif_model_monsoon_end_output_layer = \
-				# 		op.render_and_save_pointwise_output_layer(
-				# 			pointwise_output_csv_filepath,
-				# 			'Kharif Model Monsoon End Output',
-				# 			'Monsoon PET-AET',
-				# 			self.output_configuration['graduated_rendering_interval_points'],
-				# 			shapefile_path=os.path.join(self.base_path, 'kharif_monsoon_et_deficit.shp')
-				# 		)
-				# for i in range(len(self.crop_names)):
-				# 	op.compute_and_display_cadastral_vulnerability(
-				# 		self.modelCalculator.cadastral_layer,
-				# 		self.modelCalculator.output_grid_points,
-				# 		self.modelCalculator.output_cadastral_points,
-				# 		i,
-				# 		self.crop_names[i],
-				# 		self.path
-				# 	)
-			print ("KM--- %s seconds ---" % (time.time() - start_time))
+	def fetch_inputs(self):
+		if INPUT_FROM_GRID_POINTS_ROSTER:
+			district = self.dlg.district.currentText()
+			self.input_layers = {
+				'grid_points_roster_layer':
+					self.iface.addVectorLayer(ROSTER_SHAPEFILES_PATH + '/' + district + '/Grid_points.shp', 'Grid-points', 'ogr')
+			}
+			self.iface.addVectorLayer(ROSTER_SHAPEFILES_PATH+'/'+district+'/District.shp', district+' District', 'ogr')
 
-		# self.iface.actionHideAllLayers().trigger()
-		# 	self.iface.legendInterface().setLayerVisible(self.input_layers['zones_layer'], True)
-		# 	if 'drainage_layer' in locals():	self.iface.legendInterface().setLayerVisible(self.input_layers['drainage_layer'], True)
-		# 	if (crop in long_kharif_crops):		self.iface.legendInterface().setLayerVisible(kharif_model_monsoon_end_output_layer, True)
-		# 	self.iface.legendInterface().setLayerVisible(kharif_model_crop_end_output_layer, True)
-		# 	self.iface.mapCanvas().setExtent(self.input_layers['zones_layer'].extent())
-		# 	self.iface.mapCanvas().mapRenderer().setDestinationCrs(self.input_layers['zones_layer'].crs())
+		if self.progress_dlg.aborted:   return
 
-			#~ if self.dlg.save_image_group_box.isChecked():
-				#~ QTimer.singleShot(1000, lambda :	self.iface.mapCanvas().saveAsImage(self.dlg.save_image_filename.text()))
-		
-	def fetch_inputs(self, path):
-		# self.dlg.show()
-		# if self.dlg.exec_() == QFileDialog.Rejected:	return False
-		self.base_path = self.path = path
-		self.input_layers = {}
-
-		self.iface.addVectorLayer(os.path.join(path, REGION_SHAPEFILE), 'Zones', 'ogr')
-		if not READ_FROM_POINTS_DATA_FILE:
-			print 'Loading Zones Layer'
-			self.input_layers['zones_layer'] = self.iface.addVectorLayer(os.path.join(path, 'Villages.shp'), 'Zones', 'ogr')
-			print 'Loading Soil Layer'
-			self.input_layers['soil_layer'] = self.iface.addVectorLayer(os.path.join(path, 'Soil.shp'), 'Soil Cover', 'ogr')
-			print 'Loading LULC Layer'
-			self.input_layers['lulc_layer'] = self.iface.addVectorLayer(os.path.join(path, 'LULC.shp'), 'Land-Use-Land-Cover', 'ogr')
-			print 'Loading Slope Layer'
-			self.input_layers['slope_layer'] = self.iface.addRasterLayer(os.path.join(path, 'Slope.tif'), 'Slope')
-
+		self.progress_dlg.progress_text.setText('Fetching rainfall data...')
+		self.progress_dlg.progress_bar.setValue(0)
 		print 'Fetching rainfall data'
 		with open(os.path.join(ET0_AND_RAINFALL_MASTER_FILES_PATH, 'Rainfall.csv'), 'r') as f:
 			reader = csv.reader(f)
 			reader.next()
 			self.rain = {(row[0], row[1], row[2], row[3]): numpy.array([float(v)    for v in row[4:]])   for row in reader}
 
+		self.progress_dlg.progress_text.setText('Fetching ET0 data...')
+		self.progress_dlg.progress_bar.setValue(0)
 		print 'Fetching ET0 data'
 		with open(os.path.join(ET0_AND_RAINFALL_MASTER_FILES_PATH, 'ET0.csv'), 'r') as f:
 			reader = csv.DictReader(f)
@@ -335,24 +254,10 @@ class KharifModel:
 					[float(row['Mar'])] * 31, [float(row['Apr'])] * 30, [float(row['May'])] * 31
 				]))	for row in reader
 			}
-		#2 lines Commented by me
-		# self.sowing_threshold = DEFAULT_SOWING_THRESHOLD
-		# self.monsoon_end_date_index = MONSOON_END_DATE_INDEX
 
-		#3 lines added by me
 		self.sowing_threshold = self.dlg.sowing_threshold.value()
 		self.monsoon_end_date_index = self.dlg.monsoon_end.value()+122
-		self.crop_names = self.dlg.selected_crop
-		if len(self.crop_names) == 0 :	raise Exception('No crop selected')
-		self.rain_year=self.dlg.rainfall_year
-		# print(self.dlg.dist_tal_pair)
+		self.crop_name = self.dlg.selected_crop.currentText()
+		self.rain_year=self.dlg.rainfall_year.currentText()
+		self.end_date_indices = self.dlg.end_date_indices
 		return
-		# print(s)
-		# self.district=s.split(',')
-		# print(self.district)
-		# self.taluka=self.dlg.dist_tal_pair
-		# self.rainfall=self.dlg.rainfall_value
-		# self.area=self.dlg.taluka_village_pair
-
-		self.output_configuration = {}
-		self.output_configuration['graduated_rendering_interval_points'] = DEBUG_OR_TEST_GRADUATED_RENDERING_INTERVAL_POINTS

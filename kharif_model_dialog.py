@@ -27,14 +27,16 @@ from PyQt4 import QtGui, uic
 from PyQt4.QtGui import QFileDialog
 from configuration import *
 
-from constants_dicts_lookups import dict_crop,dict_rabi_crop,district_list,rain_year
+from constants_dicts_lookups import dict_crop, district_list, rain_years
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'kharif_model_dialog_base.ui'))
 
+PROGRESS_FORM_CLASS, _ = uic.loadUiType(os.path.join(
+    os.path.dirname(__file__), 'progress_dialog.ui'))
 
 class KharifModelDialog(QtGui.QDialog, FORM_CLASS):
-	def __init__(self, parent=None, crops=[]):
+	def __init__(self, parent=None):
 		"""Constructor."""
 		super(KharifModelDialog, self).__init__(parent)
 		# Set up the user interface from Designer.
@@ -44,144 +46,41 @@ class KharifModelDialog(QtGui.QDialog, FORM_CLASS):
 		# #widgets-and-dialogs-with-auto-connect
 		self.setupUi(self)
 		
-		#~ self.crop_combo_box.addItems(crops)
-		
-		self.last_path = ''
-		self.crops = []
-		self.rabi_crops = []
 		self.sowing_threshold.setValue(DEFAULT_SOWING_THRESHOLD)
 		self.monsoon_end.setValue(MONSOON_END_DATE_INDEX-122)
 		
-		dist_list=[]
-		for district in district_list:
-			dist_list.append(district)
+		self.district.clear()
+		self.district.addItems(district_list)
 
-		
-		self.district_selected.clear()
-		self.district_selected.addItems(dist_list)
-
-
-		rain=[]
-		for year in rain_year:
-			rain.append(year)
-
-		
 		self.rainfall_year.clear()
-		self.rainfall_year.addItems(rain)
+		self.rainfall_year.addItems(rain_years)
 
-
-		new_crop=[]
-		for crop in crops:
-			new_crop.append(crop)
-
-		
 		self.selected_crop.clear()
-		self.selected_crop.addItems(new_crop)
+		self.selected_crop.addItems(dict_crop.keys())
 
+		self.end_date_indices = []
 
-
-		# self.folder_path_browse.clicked.connect(lambda : self.on_browse(self.folder_path, 'Folder containing the data-set', folder=True))
-		# self.zones_layer_browse.clicked.connect(lambda : self.on_browse(self.zones_layer_filename, 'Zones Vector Layer', 'Shapefiles (*.shp)'))
-		# self.soil_layer_browse.clicked.connect(lambda : self.on_browse(self.soil_layer_filename, 'Soil-cover Vector Layer', 'Shapefiles (*.shp)'))
-		# self.lulc_layer_browse.clicked.connect(lambda : self.on_browse(self.lulc_layer_filename, 'Land-use-land-cover Vector Layer', 'Shapefiles (*.shp)'))
-		# self.cadastral_layer_browse.clicked.connect(lambda : self.on_browse(self.cadastral_layer_filename, 'Cadastral Map Vector Layer', 'Shapefiles (*.shp)'))
-		# self.slope_layer_browse.clicked.connect(lambda : self.on_browse(self.slope_layer_filename, 'Slope Raster Layer', 'TIFF files (*.tif *.tiff)'))
-		# self.drainage_layer_browse.clicked.connect(lambda : self.on_browse(self.drainage_layer_filename, 'Drainage Vector Layer', 'Shapefiles (*.shp)'))
-		# self.rainfall_csv_browse.clicked.connect(lambda : self.on_browse(self.rainfall_csv_filename, 'Daily Rainfall CSV File', 'CSV files (*.csv)'))
-		# self.crops_select_button.clicked.connect(lambda : self.on_crop_select_button())
-		# self.rabi_crops_select_button.clicked.connect(lambda : self.on_rabi_crop_select_button())
-		
-		self.save_image_browse.clicked.connect(lambda : self.on_browse(self.save_image_filename, 'Save As Image In Folder', 'PNG files (*.png)', folder=True, save=True))
-		
-		self.colour_code_interval_points = [0, 100]
 		self.output_deficit_add_button.clicked.connect(self.on_add)
 		self.output_deficit_remove_button.clicked.connect(self.on_remove)
-		# self.colour_code_intervals_list_widget.addItem('0-100')
-	
-	def on_browse(self, lineEdit, caption, fltr='', folder=False, save=False):
-		if folder:
-			if save:
-				path = QtGui.QFileDialog.getSaveFileName(self, caption, self.last_path, '.png')
-			else:
-				path = QtGui.QFileDialog.getExistingDirectory(self, caption, self.last_path)
-				self.last_path = path
-				self.autofill(path)
-		else:
-			path = QtGui.QFileDialog.getOpenFileName(self, caption, self.last_path, fltr)
-		lineEdit.setText(path)
-		if not self.folder_path.text():	self.last_path = os.path.dirname(path)
-	
-	def autofill(self, path):
-		inputfiles_lineEdit_dict = {
-			'Zones.shp': self.zones_layer_filename,
-			'Soil.shp': self.soil_layer_filename,
-			'LULC.shp': self.lulc_layer_filename,
-			'Cadastral.shp': self.cadastral_layer_filename,
-			'Slope.tif': self.slope_layer_filename,
-			'Drainage.shp': self.drainage_layer_filename,
-			'Rainfall.csv': self.rainfall_csv_filename
-		}
-		print path + '/Rainfall.csv', os.path.exists(path + '/Rainfall.csv')
-		for inputfile in inputfiles_lineEdit_dict:
-			if os.path.exists(path + '/' + inputfile):
-				inputfiles_lineEdit_dict[inputfile].setText(path + '/' + inputfile)
-	
-	# def on_split(self):
-	# 	split_at = self.colour_code_intervals_split_value_spin_box.value()
-	# 	if split_at not in self.colour_code_interval_points:
-	# 		i = 0
-	# 		while i < len(self.colour_code_interval_points) and self.colour_code_interval_points[i] < split_at:
-	# 			i += 1
-	# 		self.colour_code_interval_points.insert(i, split_at)
-	# 		self.colour_code_intervals_list_widget.takeItem(i-1)
-	# 		self.colour_code_intervals_list_widget.insertItem(i-1, str(self.colour_code_interval_points[i-1])+'-'+str(self.colour_code_interval_points[i]))
-	# 		self.colour_code_intervals_list_widget.insertItem(i, str(self.colour_code_interval_points[i])+'-'+str(self.colour_code_interval_points[i+1]))
-
-	# def on_merge(self):
-	# 	selection = self.colour_code_intervals_list_widget.currentRow()
-	# 	if selection > 0:
-	# 		self.colour_code_intervals_list_widget.takeItem(selection-1)
-	# 		self.colour_code_intervals_list_widget.takeItem(selection-1)
-	# 		del self.colour_code_interval_points[selection]
-	# 		self.colour_code_intervals_list_widget.insertItem(selection-1, str(self.colour_code_interval_points[selection-1])+'-'+str(self.colour_code_interval_points[selection]))
-
 
 	def on_add(self):
-		split_at = self.output_deficit_date.selectedDate()
-		
-		self.output_deficit_list_widget.addItem(split_at.toString())
-		# if split_at not in self.colour_code_interval_points:
-		# 	i = 0
-		# 	while i < len(self.colour_code_interval_points) and self.colour_code_interval_points[i] < split_at:
-		# 		i += 1
-		# 	self.colour_code_interval_points.insert(i, split_at)
-		# 	self.colour_code_intervals_list_widget.takeItem(i-1)
-		# 	self.colour_code_intervals_list_widget.insertItem(split_at)
-		# 	self.colour_code_intervals_list_widget.insertItem(i, str(self.colour_code_interval_points[i])+'-'+str(self.colour_code_interval_points[i+1]))
+		accumulated_deficit_at = self.output_deficit_date.selectedDate()
+		self.deficit_dates_list_widget.addItem(accumulated_deficit_at.toString())
+		self.end_date_indices.append(accumulated_deficit_at.dayOfYear()-152)
 
 	def on_remove(self):
-		selection = self.output_deficit_list_widget.currentRow()
-		item=self.output_deficit_list_widget.takeItem(selection)
-		item=None
-		# if selection > 0:
-		# 	self.colour_code_intervals_list_widget.takeItem(selection-1)
-		# 	self.colour_code_intervals_list_widget.takeItem(selection-1)
-		# 	del self.colour_code_interval_points[selection]
-		# 	self.colour_code_intervals_list_widget.insertItem(selection-1, str(self.colour_code_interval_points[selection-1])+'-'+str(self.colour_code_interval_points[selection]))
-	
-	def on_crop_select_button(self):
-		crops_selection_dialog = uic.loadUi(os.path.join(os.path.dirname(__file__), 'crops_selection_dialog.ui'))
-		for crop in self.crops:	eval("crops_selection_dialog."+crop+".setChecked(True)")
-		crops_selection_dialog.show()
-		if crops_selection_dialog.exec_() == QFileDialog.Rejected:	return
-		self.crops = filter(lambda crop: eval("hasattr(csd, '"+crop+"') and csd."+crop+".isChecked()", {"csd": crops_selection_dialog}), sorted(dict_crop.keys()))
-		self.selected_crops.setText(', '.join(self.crops))
+		selection = self.deficit_dates_list_widget.currentRow()
+		self.deficit_dates_list_widget.takeItem(selection)
+		del self.end_date_indices[selection]
 
 
-	def on_rabi_crop_select_button(self):
-		rabi_crops_selection_dialog = uic.loadUi(os.path.join(os.path.dirname(__file__), 'rabi_crops_selection_dialog.ui'))
-		for crop in self.rabi_crops:	eval("rabi_crops_selection_dialog."+crop+".setChecked(True)")
-		rabi_crops_selection_dialog.show()
-		if rabi_crops_selection_dialog.exec_() == QFileDialog.Rejected:	return
-		self.rabi_crops = filter(lambda crop: eval("hasattr(csd, '"+crop+"') and csd."+crop+".isChecked()", {"csd": rabi_crops_selection_dialog}), sorted(dict_rabi_crop.keys()))
-		self.selected_rabi_crops.setText(', '.join(self.rabi_crops))
+class KharifModelProgressDialog(QtGui.QDialog, PROGRESS_FORM_CLASS):
+	def __init__(self, parent=None):
+		super(KharifModelProgressDialog, self).__init__(parent)
+		self.setupUi(self)
+		self.progress_text.setText('')
+		self.progress_bar.setValue(0)
+		self.aborted = False
+		def set_aborted():
+			self.aborted = True
+		self.abort_button.clicked.connect(set_aborted)

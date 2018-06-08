@@ -1,25 +1,27 @@
-# READ_FROM_POINTS_DATA_FILE = True
-# REGION_SHAPEFILE = 'D:/PoCRA/deliverables/for_dashboard/example_roster/amravati_taluka_bhatkuli.shp'
-# ET0_AND_RAINFALL_MASTER_FILES_PATH = 'D:/PoCRA/deliverables/for_dashboard'
-# REGION_POINTS_DATA_FILE_PATH = 'D:/PoCRA/deliverables/for_dashboard/example_roster/grid_points_data.csv'
-# #REGION_DATA_FILES_PATH = 'D:/PoCRA/deliverables/one-time_cluster_shapefiles/cluster_level_data/Amravati/503_pt-7_01'
+INPUT_FROM_GRID_POINTS_ROSTER = True
+READ_FROM_POINTS_DATA_FILE = not INPUT_FROM_GRID_POINTS_ROSTER and True
+REGION_SHAPEFILE = 'D:/PoCRA/deliverables/for_dashboard/example_roster/amravati_taluka_bhatkuli.shp'
+ET0_AND_RAINFALL_MASTER_FILES_PATH = 'D:/PoCRA/deliverables/for_dashboard'
+REGION_POINTS_DATA_FILE_PATH = 'D:/PoCRA/deliverables/for_dashboard/example_roster/grid_points_data.csv'
+REGION_DATA_FILES_PATH = 'D:/PoCRA/deliverables/one-time_cluster_shapefiles/cluster_level_data/Amravati/503_pt-7_01'
+ROSTER_SHAPEFILES_PATH = 'D:/PoCRA/deliverables/for_dashboard/roster'
 # DEBUG_OR_TEST_GRADUATED_RENDERING_INTERVAL_POINTS = [0, 25, 50, 75]
 
-# #	Input-Output protocol constants
-# RAINFALL_CSV_FILENAME = 'Rainfall.csv'
-# #POINTWISE_OUTPUT_CSV_FILENAME = 'kharif_model_pointwise_output.csv'
-
-
-READ_FROM_POINTS_DATA_FILE = True
-REGION_SHAPEFILE = '/home/swapnil/Sem-3/MTP/example_roster/amravati_taluka_bhatkuli.shp'
-ET0_AND_RAINFALL_MASTER_FILES_PATH = '/home/swapnil/Sem-3/MTP/example_roster'
-REGION_POINTS_DATA_FILE_PATH = '/home/swapnil/Sem-3/MTP/example_roster/grid_points_data.csv'
-REGION_DATA_FILES_PATH = '/home/swapnil/Sem-3/MTP/example_roster/'
-DEBUG_OR_TEST_GRADUATED_RENDERING_INTERVAL_POINTS = [0, 25, 50, 75]
-
 #	Input-Output protocol constants
-RAINFALL_CSV_FILENAME = '/home/swapnil/Sem-3/MTP/example_roster/Rainfall.csv'
+RAINFALL_CSV_FILENAME = 'Rainfall.csv'
 #POINTWISE_OUTPUT_CSV_FILENAME = 'kharif_model_pointwise_output.csv'
+
+
+# READ_FROM_POINTS_DATA_FILE = True
+# REGION_SHAPEFILE = '/home/swapnil/Sem-3/MTP/example_roster/amravati_taluka_bhatkuli.shp'
+# ET0_AND_RAINFALL_MASTER_FILES_PATH = '/home/swapnil/Sem-3/MTP/example_roster'
+# REGION_POINTS_DATA_FILE_PATH = '/home/swapnil/Sem-3/MTP/example_roster/grid_points_data.csv'
+# REGION_DATA_FILES_PATH = '/home/swapnil/Sem-3/MTP/example_roster/'
+# DEBUG_OR_TEST_GRADUATED_RENDERING_INTERVAL_POINTS = [0, 25, 50, 75]
+#
+# #	Input-Output protocol constants
+# RAINFALL_CSV_FILENAME = '/home/swapnil/Sem-3/MTP/example_roster/Rainfall.csv'
+# #POINTWISE_OUTPUT_CSV_FILENAME = 'kharif_model_pointwise_output.csv'
 
 
 #	Computation Settings
