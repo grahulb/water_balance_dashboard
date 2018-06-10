@@ -53,18 +53,18 @@ class Point:
 		elif READ_FROM_POINTS_DATA_FILE:	return self.data['Soil Texture']
 	@property
 	def district(self):
-		if INPUT_FROM_GRID_POINTS_ROSTER:   return str(self.feature['District'])
-		elif READ_FROM_POINTS_DATA_FILE:	return self.data['District']
+		if INPUT_FROM_GRID_POINTS_ROSTER:   return str(self.feature['District']).lower()
+		elif READ_FROM_POINTS_DATA_FILE:	return self.data['District'].lower()
 	@property
 	def taluka(self):
-		return 'Bhatkuli'
-		if INPUT_FROM_GRID_POINTS_ROSTER:   return str(self.feature['Taluka'])
-		elif READ_FROM_POINTS_DATA_FILE:    return self.data['Taluka']
+		# return 'Bhatkuli'
+		if INPUT_FROM_GRID_POINTS_ROSTER:   taluka_code = str(self.feature['Taluka Cod']);   return taluka_code_to_name_dict[taluka_code] if taluka_code != 'NULL' else 'NULL'
+		elif READ_FROM_POINTS_DATA_FILE:    return self.data['Taluka'].lower()
 	@property
 	def rain_circle(self):
-		return 'Bhatkuli'
-		if INPUT_FROM_GRID_POINTS_ROSTER:   return str(self.feature['Rainfall C'])
-		elif READ_FROM_POINTS_DATA_FILE:    return self.data['Rainfall Circle']
+		# return 'Bhatkuli'
+		if INPUT_FROM_GRID_POINTS_ROSTER:   return str(self.feature['Rainfall C']).lower()
+		elif READ_FROM_POINTS_DATA_FILE:    return self.data['Rainfall Circle'].lower()
 	@property
 	def depth_value(self):
 		if INPUT_FROM_GRID_POINTS_ROSTER:   soil_depth_str = str(self.feature['Soil Depth']);   return float(soil_depth_str) if soil_depth_str != 'NULL' else 'NULL'
@@ -371,6 +371,7 @@ class KharifModelCalculator:
 		return output_points_grid
 	
 	def filter_out_points_with_incomplete_data(self, points, year):
+		self.rain_not_found_for = []
 		null_token = 'NULL' if INPUT_FROM_GRID_POINTS_ROSTER else ''
 		for points_row in points:
 			for point in points_row:
@@ -378,6 +379,8 @@ class KharifModelCalculator:
 					point.is_no_evaluation_point = True
 				if (point.district, point.taluka, point.rain_circle, year) not in self.rain:
 					point.is_no_evaluation_point = True
+					if (point.district, point.taluka, point.rain_circle, year) not in self.rain_not_found_for:
+						self.rain_not_found_for.append((point.district, point.taluka, point.rain_circle, year))
 
 	def calculate(self,
 					rain,

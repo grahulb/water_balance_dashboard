@@ -220,7 +220,9 @@ class KharifModel:
 			save_file_path = os.path.join(REGION_DATA_FILES_PATH, layer_name + '.tif')
 			op.save_pointwise_deficit_as_raster(self.iface, self.modelCalculator.points_grid, end_date_index, save_file_path, layer_name)
 
-		print ("KM--- %s seconds ---" % (time.time() - start_time))
+		print self.modelCalculator.rain_not_found_for
+		print 'Rain not found for : ', len(self.modelCalculator.rain_not_found_for), ' circles'
+		print ("--- %s seconds ---" % (time.time() - start_time))
 
 	def fetch_inputs(self):
 		if INPUT_FROM_GRID_POINTS_ROSTER:
@@ -239,7 +241,7 @@ class KharifModel:
 		with open(os.path.join(ET0_AND_RAINFALL_MASTER_FILES_PATH, 'Rainfall.csv'), 'r') as f:
 			reader = csv.reader(f)
 			reader.next()
-			self.rain = {(row[0], row[1], row[2], row[3]): numpy.array([float(v)    for v in row[4:]])   for row in reader}
+			self.rain = {(row[0].lower(), row[1].lower(), row[2].lower(), row[3]): numpy.array([float(v)    for v in row[4:]])   for row in reader}
 
 		self.progress_dlg.progress_text.setText('Fetching ET0 data...')
 		self.progress_dlg.progress_bar.setValue(0)
@@ -247,7 +249,7 @@ class KharifModel:
 		with open(os.path.join(ET0_AND_RAINFALL_MASTER_FILES_PATH, 'ET0.csv'), 'r') as f:
 			reader = csv.DictReader(f)
 			self.et0 = {
-				row['District']: list(itertools.chain(*[
+				row['District'].lower(): list(itertools.chain(*[
 					[float(row['Jun'])] * 30, [float(row['Jul'])] * 31, [float(row['Aug'])] * 31,
 					[float(row['Sep'])] * 30, [float(row['Oct'])] * 31, [float(row['Nov'])] * 30,
 					[float(row['Dec'])] * 31, [float(row['Jan'])] * 31,	[float(row['Feb'])] * 28,
