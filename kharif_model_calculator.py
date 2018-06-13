@@ -9,10 +9,13 @@ import itertools
 class Budget:
 	
 	def __init__(self):
-		self.sm, self.runoff, self.infil, self.AET, self.GW_rech, self.sec_run_off = [],[],[],[],[],[]
+		self.sm, self.pri_runoff, self.infil, self.AET, self.GW_rech, self.sec_runoff = [], [], [], [], [], []
+		self.sm_on_date, self.runoff_till_date, self.infil_till_date, self.AET_till_date,\
+		self.GW_rech_till_date,	self.sec_runoff_till_date, self.PET_minus_AET_till_date =\
+			{}, {}, {}, {}, {}, {}, {}
+		self.accu_pri_runoff = self.accu_infil = self.accu_AET = self.accu_GW_rech = self.accu_sec_runoff = 0
 		
 	def summarize(self, start_date_index, end_date_indices, PET):
-		self.sm_on_date, self.runoff_till_date, self.infil_till_date, self.AET_till_date, self.GW_rech_till_date = {}, {}, {}, {}, {}
 		self.PET_minus_AET_till_date = {}
 		for end_date_index in end_date_indices:
 			# self.sm_on_date[end_date_index] = self.sm[end_date_index]
@@ -118,12 +121,14 @@ class Point:
 		self.SM1_fraction = self.layer2_moisture = self.WP
 
 		for day in range(start_date_index, max(end_date_indices) + 1):
-			self.primary_runoff(day, rain)
-			self.aet(day)
+			self.primary_runoff(day, rain, end_date_indices)
+			self.aet(day, end_date_indices)
 			self.percolation_below_root_zone(day)
-			self.secondary_runoff()
-			self.percolation_to_GW(day)
-		self.budget.summarize(start_date_index, end_date_indices, self.crop.PET)
+			self.secondary_runoff(day, end_date_indices)
+			self.percolation_to_GW(day, end_date_indices)
+			if day in end_date_indices:
+				self.budget.PET_minus_AET_till_date[day] = sum(self.crop.PET[start_date_index:day+1]) - self.budget.AET_till_date[day]
+		# self.budget.summarize(start_date_index, end_date_indices, self.crop.PET)
 
 	def setup_for_daily_computations_numpy(self):
 		"""
@@ -198,17 +203,18 @@ class Point:
 		Primary Runoff 'Swat_RO' using SWAT equation 2:1.1.1
 		"""
 		self.budget.sm.append((self.SM1_fraction * self.SM1 + self.layer2_moisture * self.SM2) * 1000)
+
 		self.SW = self.budget.sm[-1] - self.WP_depth
 		S_swat = self.Smax * (1 - self.SW / (self.SW + np.exp(self.W1 - self.W2 * self.SW)))
 		Cn_swat = 25400 / (S_swat + 254)
 		Ia_swat = 0.2 * S_swat
-		self.budget.runoff.append(np.where(rain[day] > Ia_swat,
-		                                   ((rain[day] - Ia_swat) ** 2) / (rain[day] + 0.8 * S_swat),
-		                                   0
-		                                   ))
-		self.budget.infil.append(rain[day] - self.budget.runoff[day])
+		self.budget.pri_runoff.append(np.where(rain[day] > Ia_swat,
+		                                       ((rain[day] - Ia_swat) ** 2) / (rain[day] + 0.8 * S_swat),
+		                                       0
+		                                       ))
+		self.budget.infil.append(rain[day] - self.budget.pri_runoff[day])
 
-	def primary_runoff(self, day, rain):
+	def primary_runoff(self, day, rain, end_date_indices):
 		"""
 		Retention parameter 'S_swat' using SWAT equation 2:1.1.6
 		Curve Number for the day 'Cn_swat' using SWAT equation 2:1.1.11
@@ -216,13 +222,20 @@ class Point:
 			'Ia_swat' derived approximately as recommended by SWAT
 		Primary Runoff 'Swat_RO' using SWAT equation 2:1.1.1
 		"""
-		self.budget.sm.append((self.SM1_fraction * self.SM1 + self.layer2_moisture * self.SM2) * 1000)
-		self.SW = self.budget.sm[-1] - self.WP_depth
+		sm = (self.SM1_fraction * self.SM1 + self.layer2_moisture * self.SM2) * 1000
+		self.budget.sm.append(sm)
+		self.SW = sm - self.WP_depth
 		S_swat = self.Smax * (1 - self.SW / (self.SW + exp(self.W1 - self.W2 * self.SW)))
 		Cn_swat = 25400 / float(S_swat + 254)
 		Ia_swat = 0.2 * S_swat
-		self.budget.runoff.append(((rain[day] - Ia_swat) ** 2) / (rain[day] + 0.8 * S_swat) if (rain[day] > Ia_swat) else 0)
-		self.budget.infil.append(rain[day] - self.budget.runoff[day])
+		self.budget.pri_runoff.append(((rain[day] - Ia_swat) ** 2) / (rain[day] + 0.8 * S_swat) if (rain[day] > Ia_swat) else 0)
+		self.budget.infil.append(rain[day] - self.budget.pri_runoff[day])
+		self.budget.accu_pri_runoff += self.budget.pri_runoff[-1]
+		self.budget.accu_infil +=  self.budget.infil[-1]
+		if day in end_date_indices:
+			self.budget.sm_on_date[day] = sm
+			self.budget.runoff_till_date[day] = self.budget.accu_pri_runoff
+			self.budget.infil_till_date[day] = self.budget.accu_infil
 
 	def aet_numpy(self, day):
 		"""
@@ -240,7 +253,7 @@ class Point:
 		PETs = np.array([self.crop.PET[day] if day <= self.crop.end_date_index else 0])
 		self.budget.AET.append(KS * PETs)
 
-	def aet(self, day):
+	def aet(self, day, end_date_indices):
 		"""
 		Water Stress Coefficient 'KS' using FAO Irrigation and Drainage Paper 56, page 167 and
 			page 169 equation 84
@@ -254,6 +267,9 @@ class Point:
 		else:
 			KS = (self.SM1_fraction - self.WP) / (self.FC - self.WP) / (1 - self.crop.depletion_factor)
 		self.budget.AET.append(KS * self.crop.PET[day])
+		self.budget.accu_AET += (KS * self.crop.PET[day])
+		if day in end_date_indices:
+			self.budget.AET_till_date[day] = self.budget.accu_AET
 
 	def percolation_below_root_zone_numpy(self, day):
 		"""
@@ -295,11 +311,11 @@ class Point:
 			self.R_to_second_layer = 0
 		self.SM2_before = (self.layer2_moisture * self.SM2 * 1000 + self.R_to_second_layer) / self.SM2 / 1000
 
-	def secondary_runoff_numpy(self):
+	def secondary_runoff_numpy(self, day, end_date_indices):
 		"""
 
 		"""
-		self.budget.sec_run_off.append(np.where(
+		self.budget.sec_runoff.append(np.where(
 			((self.SM1_before * self.SM1 - self.R_to_second_layer / 1000) / self.SM1) > self.Sat,
 			(((self.SM1_before * self.SM1 - self.R_to_second_layer / 1000) / self.SM1) - self.Sat) * self.SM1 * 1000,
 			0
@@ -307,15 +323,18 @@ class Point:
 		self.SM1_fraction = np.minimum((self.SM1_before * self.SM1 * 1000 - self.R_to_second_layer) / self.SM1 / 1000,
 		                               self.Sat)
 
-	def secondary_runoff(self):
+	def secondary_runoff(self, day, end_date_indices):
 		"""
 
 		"""
 		if (((self.SM1_before * self.SM1 - self.R_to_second_layer / 1000) / self.SM1) > self.Sat):
-			self.budget.sec_run_off.append((((self.SM1_before * self.SM1 - self.R_to_second_layer / 1000) / self.SM1) - self.Sat) * self.SM1 * 1000)
+			self.budget.sec_runoff.append((((self.SM1_before * self.SM1 - self.R_to_second_layer / 1000) / self.SM1) - self.Sat) * self.SM1 * 1000)
 		else:
-			self.budget.sec_run_off.append(0)
+			self.budget.sec_runoff.append(0)
+		self.budget.accu_sec_runoff += self.budget.sec_runoff[-1]
 		self.SM1_fraction = min((self.SM1_before * self.SM1 * 1000 - self.R_to_second_layer) / self.SM1 / 1000, self.Sat)
+		if day in end_date_indices:
+			self.budget.sec_runoff_till_date[day] = self.budget.accu_sec_runoff
 
 	def percolation_to_GW_numpy(self, day):
 		"""
@@ -326,13 +345,15 @@ class Point:
 		self.layer2_moisture = np.minimum(
 			((self.SM2_before * self.SM2 * 1000 - self.budget.GW_rech[day]) / self.SM2 / 1000), self.Sat)
 
-	def percolation_to_GW(self, day):
+	def percolation_to_GW(self, day, end_date_indices):
 		"""
 
 		"""
 		self.budget.GW_rech.append(max((self.SM2_before - self.FC) * self.SM2 * self.daily_perc_factor * 1000, 0))
-		self.layer2_moisture = min(((self.SM2_before * self.SM2 * 1000 - self.budget.GW_rech[day]) / self.SM2 / 1000),
-		                           self.Sat)
+		self.budget.accu_GW_rech += self.budget.GW_rech[-1]
+		self.layer2_moisture = min(((self.SM2_before * self.SM2 * 1000 - self.budget.GW_rech[day]) / self.SM2 / 1000), self.Sat)
+		if day in end_date_indices:
+			self.budget.GW_rech_till_date[day] = self.budget.accu_GW_rech
 
 
 class KharifModelCalculator:

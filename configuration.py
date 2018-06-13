@@ -1,9 +1,8 @@
 INPUT_FROM_GRID_POINTS_ROSTER = True
 READ_FROM_POINTS_DATA_FILE = not INPUT_FROM_GRID_POINTS_ROSTER and True
-REGION_SHAPEFILE = 'D:/PoCRA/deliverables/for_dashboard/example_roster/amravati_taluka_bhatkuli.shp'
 ET0_AND_RAINFALL_MASTER_FILES_PATH = 'D:/PoCRA/deliverables/for_dashboard'
 REGION_POINTS_DATA_FILE_PATH = 'D:/PoCRA/deliverables/for_dashboard/example_roster/grid_points_data.csv'
-REGION_DATA_FILES_PATH = 'D:/PoCRA/deliverables/one-time_cluster_shapefiles/cluster_level_data/Amravati/503_pt-7_01'
+REGION_DATA_FILES_PATH = 'D:/PoCRA/deliverables/for_dashboard/roster'
 ROSTER_SHAPEFILES_PATH = 'D:/PoCRA/deliverables/for_dashboard/roster'
 # DEBUG_OR_TEST_GRADUATED_RENDERING_INTERVAL_POINTS = [0, 25, 50, 75]
 
@@ -30,7 +29,7 @@ DEFAULT_SOWING_THRESHOLD = 30
 START_DATE_INDEX = 0
 MONSOON_END_DATE_INDEX = 132
 END_DATE_INDEX = 364
-END_DATE_INDICES = [30, 60, 90, 120, 150, 180, 210]
+END_DATE_INDICES = [30, 60, 90]
 YEAR = '2016'
 
 
